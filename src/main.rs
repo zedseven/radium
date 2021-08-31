@@ -1,4 +1,4 @@
-use std::{env, env::var, time::Duration};
+use std::{collections::HashSet, env::var, time::Duration};
 
 use anyhow::Context;
 use poise::{
@@ -9,10 +9,7 @@ use poise::{
 	serenity::{
 		client::parse_token,
 		http::Http,
-		model::{
-			gateway::Ready,
-			id::{ApplicationId, UserId},
-		},
+		model::{gateway::Ready, id::ApplicationId},
 		Client,
 	},
 	BoxFuture,
@@ -25,11 +22,9 @@ type PoiseContext<'a> = poise::Context<'a, Data, Error>;
 type PrefixContext<'a> = poise::PrefixContext<'a, Data, Error>;
 type SerenityContext = serenity::client::Context;
 
-struct Data {
-	owner_id: UserId,
-}
+struct Data;
 
-const TOKEN_NAME: &str = "DISCORD_TOKEN";
+const TOKEN_VAR: &str = "DISCORD_TOKEN";
 
 /// Event Handler
 fn listener<'a, U, E: Send>(
@@ -70,15 +65,11 @@ async fn ready(ctx: &SerenityContext, ready: &Ready) {
 	}
 }
 
-async fn is_owner(ctx: PrefixContext<'_>) -> Result<bool, Error> {
-	Ok(ctx.msg.author.id == ctx.data.owner_id)
-}
-
 /// Register slash commands in this guild or globally.
 ///
 /// Run with no arguments to register in guild, run with argument "global" to
 /// register globally.
-#[command(check = "is_owner", hide_in_help)]
+#[command(owners_only, hide_in_help)]
 async fn register(ctx: PrefixContext<'_>, #[flag] global: bool) -> Result<(), Error> {
 	register_slash_commands(ctx, global)
 		.await
@@ -97,10 +88,10 @@ async fn ping(ctx: PoiseContext<'_>) -> Result<(), Error> {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-	let token = var(TOKEN_NAME).with_context(|| {
+	let token = var(TOKEN_VAR).with_context(|| {
 		format!(
 			"Expected the discord token in the environment variable {}",
-			TOKEN_NAME
+			TOKEN_VAR
 		)
 	})?;
 	let app_id = parse_token(&token)
@@ -118,13 +109,16 @@ async fn main() -> Result<(), Error> {
 	println!("Application ID: {}", app_id);
 	println!("Owner ID:       {}", owner_id);
 
+	let mut owners = HashSet::new();
+	owners.insert(owner_id);
 	let mut options = poise::FrameworkOptions {
+		listener,
 		prefix_options: poise::PrefixFrameworkOptions {
 			edit_tracker: Some(poise::EditTracker::for_timespan(Duration::from_secs(3600))),
 			..Default::default()
 		},
 		on_error: |error, ctx| Box::pin(on_error(error, ctx)),
-		listener,
+		owners,
 		..Default::default()
 	};
 
@@ -134,13 +128,14 @@ async fn main() -> Result<(), Error> {
 	let framework = Framework::new(
 		"-".to_owned(),
 		ApplicationId(app_id.0),
-		move |_ctx, _ready, _framework| Box::pin(async move { Ok(Data { owner_id }) }),
+		move |_ctx, _ready, _framework| Box::pin(async move { Ok(Data) }),
 		options,
 	);
 
-	if let Err(e) = framework.start(Client::builder(&token)).await {
-		eprintln!("Client error: {:?}", e);
-	}
+	framework
+		.start(Client::builder(&token))
+		.await
+		.with_context(|| "Failed to start up".to_owned())?;
 
 	Ok(())
 }
