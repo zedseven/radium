@@ -21,7 +21,7 @@ impl EventHandler for Handler {
 		}
 	}
 
-	async fn ready(&self, _: Context, ready: Ready) {
+	async fn ready(&self, ctx: Context, ready: Ready) {
 		println!("{} is connected!", ready.user.name);
 		if ready.guilds.is_empty() {
 			println!("No connected guilds.");
@@ -29,7 +29,17 @@ impl EventHandler for Handler {
 		}
 		println!("Connected guilds:");
 		for guild in ready.guilds {
-			println!("{}", guild.id().0);
+			let guild_data = guild
+				.id()
+				.to_partial_guild(&ctx.http)
+				.await
+				.expect(format!("Unable to get guild with id {}", guild.id()).as_str());
+			println!(
+				"{} - {} ({})",
+				guild.id().0,
+				guild_data.name,
+				guild_data.approximate_member_count.unwrap_or(0)
+			);
 		}
 	}
 }
