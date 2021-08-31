@@ -1,9 +1,12 @@
 use std::env;
 
-use serenity::{
+use poise::{
 	async_trait,
-	model::{channel::Message, gateway::Ready},
-	prelude::*,
+	serenity::{
+		client::{parse_token, Context, EventHandler},
+		model::{channel::Message, gateway::Ready},
+		Client,
+	},
 };
 
 struct Handler;
@@ -53,8 +56,10 @@ async fn main() {
 		)
 		.as_str(),
 	);
+	let app_id = parse_token(&token).expect("Token is invalid").bot_user_id;
 
 	let mut client = Client::builder(&token)
+		.application_id(app_id.0)
 		.event_handler(Handler)
 		.await
 		.expect("Error creating the client");

@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-serenity = { version = "0.10", default-features = false, features = ["client", "gateway", "model", "rustls_backend"] }
+poise = { git = "https://github.com/kangalioo/poise" }
 tokio = { version = "1.10", features = ["macros", "rt-multi-thread"] }
