@@ -4,5 +4,6 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0"
 poise = { git = "https://github.com/kangalioo/poise" }
 tokio = { version = "1.10", features = ["macros", "rt-multi-thread"] }

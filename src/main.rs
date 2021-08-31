@@ -1,5 +1,6 @@
-use std::{env, time::Duration};
+use std::{env, env::var, time::Duration};
 
+use anyhow::Context;
 use poise::{
 	command,
 	defaults::{on_error, register_slash_commands},
@@ -73,36 +74,49 @@ async fn is_owner(ctx: PrefixContext<'_>) -> Result<bool, Error> {
 	Ok(ctx.msg.author.id == ctx.data.owner_id)
 }
 
-/// Register
+/// Register slash commands in this guild or globally.
+///
+/// Run with no arguments to register in guild, run with argument "global" to
+/// register globally.
 #[command(check = "is_owner", hide_in_help)]
 async fn register(ctx: PrefixContext<'_>, #[flag] global: bool) -> Result<(), Error> {
-	register_slash_commands(ctx, global).await?;
+	register_slash_commands(ctx, global)
+		.await
+		.with_context(|| "Failed to register slash commands".to_owned())?;
 	Ok(())
 }
 
-/// Ping
+/// Ping the bot.
 #[command(slash_command)]
 async fn ping(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	say_reply(ctx, "Pong".to_owned()).await?;
+	say_reply(ctx, "Pong".to_owned())
+		.await
+		.with_context(|| "Failed to reply to ping".to_owned())?;
 	Ok(())
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-	let token = env::var(TOKEN_NAME).expect(
+	let token = var(TOKEN_NAME).with_context(|| {
 		format!(
 			"Expected the discord token in the environment variable {}",
 			TOKEN_NAME
 		)
-		.as_str(),
-	);
-	let app_id = parse_token(&token).expect("Token is invalid").bot_user_id;
+	})?;
+	let app_id = parse_token(&token)
+		.with_context(|| "Token is invalid".to_owned())?
+		.bot_user_id;
 
 	let http = Http::new_with_token(&token);
-	let owner_id = http.get_current_application_info().await?.owner.id;
+	let owner_id = http
+		.get_current_application_info()
+		.await
+		.with_context(|| "Failed to get application info".to_owned())?
+		.owner
+		.id;
 
 	println!("Application ID: {}", app_id);
-	println!("Owner ID: {}", owner_id);
+	println!("Owner ID:       {}", owner_id);
 
 	let mut options = poise::FrameworkOptions {
 		prefix_options: poise::PrefixFrameworkOptions {
