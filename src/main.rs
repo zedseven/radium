@@ -53,6 +53,8 @@ impl LavalinkEventHandler for LavalinkHandler {
 const TOKEN_VAR: &str = "DISCORD_TOKEN";
 const LAVALINK_HOST_VAR: &str = "LAVALINK_HOST";
 const LAVALINK_PASSWORD_VAR: &str = "LAVALINK_PASSWORD_VAR";
+const LAVALINK_HOST_DEFAULT: &str = "127.0.0.1";
+const PREFIX: &str = "-";
 
 async fn reply<S: Into<String>>(ctx: PoiseContext<'_>, msg: S) -> Result<(), anyhow::Error> {
 	say_reply(ctx, msg.into())
@@ -368,14 +370,14 @@ async fn main() -> Result<(), Error> {
 	options.command(now_playing(), |f| f);
 
 	let framework = Framework::new(
-		"-".to_owned(),
+		PREFIX.to_owned(),
 		ApplicationId(app_id.0),
 		move |_ctx, _ready, _framework| Box::pin(async move { Ok(Data) }),
 		options,
 	);
 
 	let lava_client = LavalinkClient::builder(app_id.0)
-		.set_host(var(LAVALINK_HOST_VAR).unwrap_or_else(|_| "127.0.0.1".to_owned()))
+		.set_host(var(LAVALINK_HOST_VAR).unwrap_or_else(|_| LAVALINK_HOST_DEFAULT.to_owned()))
 		.set_password(var(LAVALINK_PASSWORD_VAR).with_context(|| {
 			format!(
 				"Expected the Lavalink password in the environment variable {}",
