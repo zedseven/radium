@@ -5,5 +5,11 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+lavalink-rs = { git = "https://gitlab.com/vicky5124/lavalink-rs", features = ["rustls"] }
+songbird = { version = "0.2", default-features = false, features = ["serenity-rustls", "gateway"] }
 poise = { git = "https://github.com/kangalioo/poise" }
 tokio = { version = "1.10", features = ["macros", "rt-multi-thread"] }
+
+[patch.crates-io]
+# Potentially have to run `cargo update -p serenity:<version> --precise <whatever version is in the git repo>`
+serenity = { git = "https://github.com/serenity-rs/serenity", branch = "next" }

@@ -11,3 +11,6 @@
 
 # JetBrains IDEs' config & project settings directory
 **/.idea/
+
+# The Lavalink server directory
+/lavalink/
