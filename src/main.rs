@@ -52,7 +52,7 @@ impl LavalinkEventHandler for LavalinkHandler {
 
 const TOKEN_VAR: &str = "DISCORD_TOKEN";
 const LAVALINK_HOST_VAR: &str = "LAVALINK_HOST";
-const LAVALINK_PASSWORD_VAR: &str = "LAVALINK_PASSWORD_VAR";
+const LAVALINK_PASSWORD_VAR: &str = "LAVALINK_PASSWORD";
 const LAVALINK_HOST_DEFAULT: &str = "127.0.0.1";
 const PREFIX: &str = "-";
 
@@ -92,12 +92,7 @@ async fn ready(ctx: &SerenityContext, ready: &Ready) {
 			.to_partial_guild(&ctx.http)
 			.await
 			.unwrap_or_else(|_| panic!("Unable to get guild with id {}", guild.id()));
-		println!(
-			"{} - {} ({})",
-			guild.id().0,
-			guild_data.name,
-			guild_data.approximate_member_count.unwrap_or(0)
-		);
+		println!("{} - {}", guild.id().0, guild_data.name);
 	}
 }
 
@@ -126,7 +121,7 @@ async fn join(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild = match ctx.guild() {
 		Some(guild) => guild,
 		None => {
-			reply(ctx, "You must use this command from within a server").await?;
+			reply(ctx, "You must use this command from within a server.").await?;
 			return Ok(());
 		}
 	};
@@ -138,7 +133,7 @@ async fn join(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	{
 		Some(channel) => channel,
 		None => {
-			reply(ctx, "You must use this command while in a voice channel").await?;
+			reply(ctx, "You must use this command while in a voice channel.").await?;
 			return Ok(());
 		}
 	};
@@ -173,7 +168,7 @@ async fn leave(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild = match ctx.guild() {
 		Some(guild) => guild,
 		None => {
-			reply(ctx, "You must use this command from within a server").await?;
+			reply(ctx, "You must use this command from within a server.").await?;
 			return Ok(());
 		}
 	};
@@ -192,9 +187,9 @@ async fn leave(ctx: PoiseContext<'_>) -> Result<(), Error> {
 			lava_client.destroy(guild.id.0).await?;
 		}
 
-		reply(ctx, "Left the voice channel").await?;
+		reply(ctx, "Left the voice channel.").await?;
 	} else {
-		reply(ctx, "Not in a voice channel").await?;
+		reply(ctx, "Not in a voice channel.").await?;
 	}
 
 	Ok(())
@@ -211,7 +206,7 @@ async fn play(
 	let guild = match ctx.guild() {
 		Some(guild) => guild,
 		None => {
-			reply(ctx, "You must use this command from within a server").await?;
+			reply(ctx, "You must use this command from within a server.").await?;
 			return Ok(());
 		}
 	};
@@ -225,7 +220,7 @@ async fn play(
 		let query_information = lava_client.auto_search_tracks(&query).await?;
 
 		if query_information.tracks.is_empty() {
-			reply(ctx, "Could not find anything for the search query").await?;
+			reply(ctx, "Could not find anything for the search query.").await?;
 			return Ok(());
 		}
 
@@ -247,7 +242,7 @@ async fn play(
 		)
 		.await?;
 	} else {
-		reply(ctx, "Radium must be in a voice channel first").await?;
+		reply(ctx, "Radium must be in a voice channel first.").await?;
 	}
 
 	Ok(())
@@ -259,7 +254,7 @@ async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild = match ctx.guild() {
 		Some(guild) => guild,
 		None => {
-			reply(ctx, "You must use this command from within a server").await?;
+			reply(ctx, "You must use this command from within a server.").await?;
 			return Ok(());
 		}
 	};
@@ -299,7 +294,7 @@ async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild = match ctx.guild() {
 		Some(guild) => guild,
 		None => {
-			reply(ctx, "You must use this command from within a server").await?;
+			reply(ctx, "You must use this command from within a server.").await?;
 			return Ok(());
 		}
 	};
@@ -319,7 +314,7 @@ async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		}
 	}
 	if !something_playing {
-		reply(ctx, "Nothing is playing at the moment").await?;
+		reply(ctx, "Nothing is playing at the moment.").await?;
 	}
 
 	Ok(())
