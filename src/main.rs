@@ -24,6 +24,14 @@ use songbird::SerenityInit;
 
 use crate::commands::*;
 
+// Constants
+const TOKEN_VAR: &str = "DISCORD_TOKEN";
+const LAVALINK_HOST_VAR: &str = "LAVALINK_HOST";
+const LAVALINK_PASSWORD_VAR: &str = "LAVALINK_PASSWORD";
+const LAVALINK_HOST_DEFAULT: &str = "127.0.0.1";
+const PREFIX: &str = "-";
+
+// Definitions
 pub type Error = Box<dyn error::Error + Send + Sync>;
 pub type PoiseContext<'a> = poise::Context<'a, Data, Error>;
 pub type PrefixContext<'a> = poise::PrefixContext<'a, Data, Error>;
@@ -39,23 +47,7 @@ impl TypeMapKey for Lavalink {
 
 struct LavalinkHandler;
 
-#[async_trait]
-impl LavalinkEventHandler for LavalinkHandler {
-	/*async fn track_start(&self, _client: LavalinkClient, event: TrackStart) {
-		println!("Track started!\nGuild: {}", event.guild_id);
-	}
-	async fn track_finish(&self, _client: LavalinkClient, event: TrackFinish) {
-		println!("Track finished!\nGuild: {}", event.guild_id);
-	}*/
-}
-
-const TOKEN_VAR: &str = "DISCORD_TOKEN";
-const LAVALINK_HOST_VAR: &str = "LAVALINK_HOST";
-const LAVALINK_PASSWORD_VAR: &str = "LAVALINK_PASSWORD";
-const LAVALINK_HOST_DEFAULT: &str = "127.0.0.1";
-const PREFIX: &str = "-";
-
-/// Event Handler
+/// Event Handlers
 fn listener<'a, U, E: Send>(
 	ctx: &'a SerenityContext,
 	event: &'a Event<'a>,
@@ -71,22 +63,14 @@ fn listener<'a, U, E: Send>(
 	}
 }
 
-/// Startup Function.
-async fn ready(ctx: &SerenityContext, ready: &Ready) {
-	println!("{} is connected!", ready.user.name);
-	if ready.guilds.is_empty() {
-		println!("No connected guilds.");
-		return;
+#[async_trait]
+impl LavalinkEventHandler for LavalinkHandler {
+	/*async fn track_start(&self, _client: LavalinkClient, event: TrackStart) {
+		println!("Track started!\nGuild: {}", event.guild_id);
 	}
-	println!("Connected guilds:");
-	for guild in &ready.guilds {
-		let guild_data = guild
-			.id()
-			.to_partial_guild(&ctx.http)
-			.await
-			.unwrap_or_else(|_| panic!("Unable to get guild with id {}", guild.id()));
-		println!("{} - {}", guild.id().0, guild_data.name);
-	}
+	async fn track_finish(&self, _client: LavalinkClient, event: TrackFinish) {
+		println!("Track finished!\nGuild: {}", event.guild_id);
+	}*/
 }
 
 /// Entry point.
@@ -163,4 +147,22 @@ async fn main() -> Result<(), Error> {
 		.with_context(|| "Failed to start up".to_owned())?;
 
 	Ok(())
+}
+
+/// Startup Function.
+async fn ready(ctx: &SerenityContext, ready: &Ready) {
+	println!("{} is connected!", ready.user.name);
+	if ready.guilds.is_empty() {
+		println!("No connected guilds.");
+		return;
+	}
+	println!("Connected guilds:");
+	for guild in &ready.guilds {
+		let guild_data = guild
+			.id()
+			.to_partial_guild(&ctx.http)
+			.await
+			.unwrap_or_else(|_| panic!("Unable to get guild with id {}", guild.id()));
+		println!("{} - {}", guild.id().0, guild_data.name);
+	}
 }
