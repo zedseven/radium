@@ -1,4 +1,5 @@
 mod commands;
+mod constants;
 mod util;
 
 use std::{collections::HashSet, env::var, error, time::Duration};
@@ -101,6 +102,7 @@ async fn main() -> Result<(), Error> {
 	};
 
 	options.command(register(), |f| f);
+	options.command(about(), |f| f);
 	options.command(ping(), |f| f);
 	options.command(join(), |f| f);
 	options.command(leave(), |f| f);
