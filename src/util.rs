@@ -1,10 +1,10 @@
 use anyhow::Context;
-use poise::say_reply;
+use poise::send_reply;
 
-use crate::PoiseContext;
+use crate::{PoiseContext, MAIN_COLOUR};
 
-pub async fn reply<S: Into<String>>(ctx: PoiseContext<'_>, msg: S) -> Result<(), anyhow::Error> {
-	say_reply(ctx, msg.into())
+pub async fn reply<S: ToString>(ctx: PoiseContext<'_>, msg: S) -> Result<(), anyhow::Error> {
+	send_reply(ctx, |m| m.embed(|e| e.colour(MAIN_COLOUR).description(msg)))
 		.await
 		.with_context(|| "Failed to send message")
 }

@@ -13,6 +13,7 @@ use poise::{
 		client::{parse_token, RawEventHandler},
 		http::Http,
 		model::{event::Event, gateway::Ready, id::ApplicationId},
+		utils::Colour,
 		Client,
 	},
 	Framework,
@@ -27,6 +28,7 @@ const LAVALINK_HOST_VAR: &str = "LAVALINK_HOST";
 const LAVALINK_PASSWORD_VAR: &str = "LAVALINK_PASSWORD";
 const LAVALINK_HOST_DEFAULT: &str = "127.0.0.1";
 const PREFIX: &str = "-";
+const MAIN_COLOUR: Colour = Colour(0xbf5c4e);
 
 // Definitions
 pub type Error = Box<dyn error::Error + Send + Sync>;
