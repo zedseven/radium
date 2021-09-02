@@ -1,7 +1,7 @@
 use anyhow::Context;
 use poise::{command, serenity::model::misc::Mentionable};
 
-use crate::{util::reply, Error, Lavalink, PoiseContext};
+use crate::{util::reply, Error, PoiseContext};
 
 /// Have Radium join the voice channel you're in.
 #[command(slash_command, aliases("j"))]
@@ -32,8 +32,7 @@ pub async fn join(ctx: PoiseContext<'_>) -> Result<(), Error> {
 
 	match handler {
 		Ok(connection_info) => {
-			let data = ctx.discord().data.read().await;
-			let lava_client = data.get::<Lavalink>().unwrap().clone();
+			let lava_client = &ctx.data().lavalink;
 			lava_client.create_session(&connection_info).await?;
 
 			reply(ctx, format!("Joined {}", channel_id.mention())).await?;
@@ -66,14 +65,10 @@ pub async fn leave(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	if manager.get(guild.id).is_some() {
 		if let Err(e) = manager.remove(guild.id).await {
 			reply(ctx, format!("Error leaving voice channel: {}", e)).await?;
-			return Ok(());
 		}
 
-		{
-			let data = ctx.discord().data.read().await;
-			let lava_client = data.get::<Lavalink>().unwrap().clone();
-			lava_client.destroy(guild.id.0).await?;
-		}
+		let lava_client = &ctx.data().lavalink;
+		lava_client.destroy(guild.id.0).await?;
 
 		reply(ctx, "Left the voice channel.").await?;
 	} else {
@@ -102,8 +97,7 @@ pub async fn play(
 	let manager = songbird::get(ctx.discord()).await.unwrap().clone();
 
 	if let Some(_handler) = manager.get(guild.id) {
-		let data = ctx.discord().data.read().await;
-		let lava_client = data.get::<Lavalink>().unwrap().clone();
+		let lava_client = &ctx.data().lavalink;
 
 		let query_information = lava_client.auto_search_tracks(&query).await?;
 
@@ -112,13 +106,14 @@ pub async fn play(
 			return Ok(());
 		}
 
-		if let Err(e) = &lava_client
+		if let Err(e) = lava_client
 			.play(guild.id.0, query_information.tracks[0].clone())
 			// Change this to play() if you want your own custom queue or no queue at all.
 			.queue()
 			.await
 		{
-			eprintln!("{}", e);
+			reply(ctx, "Failed to queue up query result.").await?;
+			eprintln!("Failed to queue up query result: {}", e);
 			return Ok(());
 		};
 		reply(
@@ -137,7 +132,7 @@ pub async fn play(
 }
 
 /// Skip the current track.
-#[command(slash_command, aliases("next"))]
+#[command(slash_command, aliases("next", "stop"))]
 pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild = match ctx.guild() {
 		Some(guild) => guild,
@@ -147,8 +142,7 @@ pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		}
 	};
 
-	let data = ctx.discord().data.read().await;
-	let lava_client = data.get::<Lavalink>().unwrap().clone();
+	let lava_client = &ctx.data().lavalink;
 
 	if let Some(track) = lava_client.skip(guild.id.0).await {
 		if lava_client
@@ -187,8 +181,7 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		}
 	};
 
-	let data = ctx.discord().data.read().await;
-	let lava_client = data.get::<Lavalink>().unwrap().clone();
+	let lava_client = &ctx.data().lavalink;
 
 	let mut something_playing = false;
 	if let Some(node) = lava_client.nodes().await.get(&guild.id.0) {
