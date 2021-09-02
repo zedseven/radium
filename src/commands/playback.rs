@@ -1,5 +1,6 @@
 use anyhow::Context;
 use poise::{command, serenity::model::misc::Mentionable};
+use url::Url;
 
 use crate::{util::reply, Error, PoiseContext};
 
@@ -101,21 +102,32 @@ pub async fn play(
 
 		let query_information = lava_client.auto_search_tracks(&query).await?;
 
+		let is_url = Url::parse(query.trim()).is_ok();
+
 		if query_information.tracks.is_empty() {
 			reply(ctx, "Could not find anything for the search query.").await?;
 			return Ok(());
 		}
 
-		if let Err(e) = lava_client
-			.play(guild.id.0, query_information.tracks[0].clone())
-			// Change this to play() if you want your own custom queue or no queue at all.
-			.queue()
-			.await
-		{
-			reply(ctx, "Failed to queue up query result.").await?;
-			eprintln!("Failed to queue up query result: {}", e);
-			return Ok(());
+		// If the query was a URL, then it's likely a playlist where all retrieved
+		// tracks are desired - otherwise, it's just the top result
+		let queue_tracks = if is_url {
+			query_information.tracks.len()
+		} else {
+			1
 		};
+		for i in 0..queue_tracks {
+			if let Err(e) = lava_client
+				.play(guild.id.0, query_information.tracks[i].clone())
+				// Change this to play() if you want your own custom queue or no queue at all.
+				.queue()
+				.await
+			{
+				reply(ctx, "Failed to queue up query result.").await?;
+				eprintln!("Failed to queue up query result: {}", e);
+				return Ok(());
+			};
+		}
 		reply(
 			ctx,
 			format!(
