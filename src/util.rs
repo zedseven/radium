@@ -1,7 +1,7 @@
 use anyhow::{Context, Error};
 use poise::{send_reply, serenity::builder::CreateEmbed};
 
-use crate::{PoiseContext, MAIN_COLOUR};
+use crate::{constants::MAIN_COLOUR, PoiseContext};
 
 pub async fn reply<S: ToString>(ctx: PoiseContext<'_>, msg: S) -> Result<(), Error> {
 	send_reply(ctx, |m| m.embed(|e| e.colour(MAIN_COLOUR).description(msg)))

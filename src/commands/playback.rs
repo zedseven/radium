@@ -165,7 +165,7 @@ pub async fn play(
 				);
 				description.push_str("](");
 				description.push_str(track_info.uri.as_str());
-				description.push_str(")");
+				description.push(')');
 				if i < queue_tracks - 1 {
 					description.push('\n');
 					if description.len() > DESCRIPTION_LENGTH_CUTOFF {

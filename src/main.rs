@@ -14,22 +14,19 @@ use poise::{
 		client::{parse_token, RawEventHandler},
 		http::Http,
 		model::{event::Event, gateway::Ready, id::ApplicationId},
-		utils::Colour,
 		Client,
 	},
 	Framework,
 };
 use songbird::SerenityInit;
 
-use crate::commands::*;
+use crate::{commands::*, constants::PREFIX};
 
-// Constants
+// Runtime Constants
 const TOKEN_VAR: &str = "DISCORD_TOKEN";
 const LAVALINK_HOST_VAR: &str = "LAVALINK_HOST";
 const LAVALINK_PASSWORD_VAR: &str = "LAVALINK_PASSWORD";
 const LAVALINK_HOST_DEFAULT: &str = "127.0.0.1";
-const PREFIX: &str = "-";
-const MAIN_COLOUR: Colour = Colour(0xbf5c4e);
 
 // Definitions
 pub type Error = Box<dyn error::Error + Send + Sync>;
@@ -46,6 +43,7 @@ struct LavalinkHandler;
 
 /// Event Handlers
 #[async_trait]
+#[allow(clippy::single_match)]
 impl RawEventHandler for Handler {
 	async fn raw_event(&self, ctx: SerenityContext, event: Event) {
 		match event {
