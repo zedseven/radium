@@ -2,7 +2,16 @@ use anyhow::Context;
 use poise::{command, serenity::model::misc::Mentionable};
 use url::Url;
 
-use crate::{util::reply, Error, PoiseContext};
+use crate::{
+	util::{chop_str, push_chopped_str, reply, reply_embed},
+	Error,
+	PoiseContext,
+};
+
+const MAX_DESCRIPTION_LENGTH: usize = 2048;
+const DESCRIPTION_LENGTH_CUTOFF: usize = MAX_DESCRIPTION_LENGTH - 512;
+const MAX_LIST_ENTRY_LENGTH: usize = 60;
+const MAX_SINGLE_ENTRY_LENGTH: usize = 40;
 
 /// Have Radium join the voice channel you're in.
 #[command(slash_command, aliases("j"))]
@@ -116,6 +125,7 @@ pub async fn play(
 		} else {
 			1
 		};
+		// Queue them up
 		for i in 0..queue_tracks {
 			if let Err(e) = lava_client
 				.play(guild.id.0, query_information.tracks[i].clone())
@@ -128,14 +138,48 @@ pub async fn play(
 				return Ok(());
 			};
 		}
-		reply(
-			ctx,
-			format!(
-				"Added to queue: {}",
-				query_information.tracks[0].info.as_ref().unwrap().title
-			),
-		)
-		.await?;
+		// Notify the user of the added tracks
+		if queue_tracks == 1 {
+			let track_info = query_information.tracks[0].info.as_ref().unwrap();
+			reply(
+				ctx,
+				format!(
+					"Added to queue: [{}]({}) [{}]",
+					chop_str(track_info.title.as_str(), MAX_SINGLE_ENTRY_LENGTH),
+					track_info.uri,
+					ctx.author().mention()
+				),
+			)
+			.await?;
+		} else {
+			let mut description = String::from("Requested by ");
+			description.push_str(ctx.author().mention().to_string().as_str());
+			description.push('\n');
+			for i in 0..queue_tracks {
+				let track_info = query_information.tracks[i].info.as_ref().unwrap();
+				description.push_str("- [");
+				push_chopped_str(
+					&mut description,
+					track_info.title.as_str(),
+					MAX_LIST_ENTRY_LENGTH,
+				);
+				description.push_str("](");
+				description.push_str(track_info.uri.as_str());
+				description.push_str(")");
+				if i < queue_tracks - 1 {
+					description.push('\n');
+					if description.len() > DESCRIPTION_LENGTH_CUTOFF {
+						description.push_str("*…the rest has been clipped*");
+						break;
+					}
+				}
+			}
+			reply_embed(ctx, |e| {
+				e.title(format!("Added {} Tracks:", queue_tracks))
+					.description(description)
+			})
+			.await?;
+		}
 	} else {
 		reply(ctx, "Radium must be in a voice channel first.").await?;
 	}
