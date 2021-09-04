@@ -1,4 +1,5 @@
 use anyhow::Context;
+use lavalink_rs::model::Track;
 use poise::{command, serenity::model::misc::Mentionable};
 use url::Url;
 
@@ -12,6 +13,7 @@ const MAX_DESCRIPTION_LENGTH: usize = 2048;
 const DESCRIPTION_LENGTH_CUTOFF: usize = MAX_DESCRIPTION_LENGTH - 512;
 const MAX_LIST_ENTRY_LENGTH: usize = 60;
 const MAX_SINGLE_ENTRY_LENGTH: usize = 40;
+const UNKNOWN_TITLE: &str = "Unknown title";
 
 /// Have Radium join the voice channel you're in.
 #[command(slash_command, aliases("j"))]
@@ -104,43 +106,121 @@ pub async fn play(
 		}
 	};
 
+	let attachments = match ctx {
+		PoiseContext::Prefix(prefix_ctx) => prefix_ctx
+			.msg
+			.attachments
+			.iter()
+			.filter(|a| {
+				dbg!(&a.content_type);
+				match &a.content_type {
+					Some(t) => t.starts_with("audio") || t.starts_with("video"),
+					None => false,
+				}
+			})
+			.map(|a| (a.url.clone(), a.filename.clone()))
+			.collect::<Vec<(String, String)>>(),
+		PoiseContext::Slash(_) => Vec::new(),
+	};
+
 	let manager = songbird::get(ctx.discord()).await.unwrap().clone();
 
 	if let Some(_handler) = manager.get(guild.id) {
 		let lava_client = &ctx.data().lavalink;
 
+		let mut query_results = Vec::new();
+
+		// Load up any attachments
+		for attachment in attachments {
+			let mut query_result = lava_client.auto_search_tracks(&attachment.0).await?;
+			for t in &mut query_result.tracks {
+				t.info = match &t.info {
+					Some(old_info) => {
+						let mut new_info = old_info.clone();
+						new_info.title = attachment.1.clone();
+						Some(new_info)
+					}
+					None => None,
+				}
+			}
+			query_results.extend_from_slice(&query_result.tracks)
+		}
+
+		// Load the command query
 		let query_information = lava_client.auto_search_tracks(&query).await?;
 
 		let is_url = Url::parse(query.trim()).is_ok();
 
-		if query_information.tracks.is_empty() {
-			reply(ctx, "Could not find anything for the search query.").await?;
-			return Ok(());
-		}
-
 		// If the query was a URL, then it's likely a playlist where all retrieved
 		// tracks are desired - otherwise, it's just the top result
-		let queue_tracks = if is_url {
+		let query_tracks = if is_url {
 			query_information.tracks.len()
 		} else {
 			1
 		};
-		// Queue them up
-		for i in 0..queue_tracks {
-			if let Err(e) = lava_client
-				.play(guild.id.0, query_information.tracks[i].clone())
-				// Change this to play() if you want your own custom queue or no queue at all.
-				.queue()
-				.await
+
+		query_results.extend_from_slice(
+			&query_information
+				.tracks
+				.iter()
+				.take(query_tracks)
+				.cloned()
+				.collect::<Vec<Track>>(),
+		);
+
+		if query_results.is_empty() {
+			reply(ctx, "Could not find anything for the search query.").await?;
+			return Ok(());
+		}
+
+		let query_results_len = query_results.len();
+
+		// For URLs that point to raw files, Lavalink seems to just return them with a
+		// title of "Unknown title" - this is a slightly hacky solution to set the title
+		// to the filename of the raw file
+		if is_url && query_tracks == 1 {
+			let track_info = &mut query_results[query_results_len - 1];
+			if track_info.info.is_some()
+				&& track_info
+					.info
+					.as_ref()
+					.unwrap()
+					.title
+					.as_str()
+					.eq(UNKNOWN_TITLE)
 			{
+				track_info.info = match &track_info.info {
+					Some(old_info) => {
+						let mut new_info = old_info.clone();
+						new_info.title = Url::parse(old_info.uri.as_str())
+							.expect(
+								"Unable to parse track info URI when it should have been \
+								 guaranteed to be valid",
+							)
+							.path_segments()
+							.expect("Unable to parse URI as a proper path")
+							.last()
+							.expect("Unable to find the last path segment of URI")
+							.to_owned();
+						Some(new_info)
+					}
+					None => None,
+				};
+			}
+		}
+
+		// Queue the tracks up
+		for track in &query_results {
+			if let Err(e) = lava_client.play(guild.id.0, track.clone()).queue().await {
 				reply(ctx, "Failed to queue up query result.").await?;
 				eprintln!("Failed to queue up query result: {}", e);
 				return Ok(());
 			};
 		}
+
 		// Notify the user of the added tracks
-		if queue_tracks == 1 {
-			let track_info = query_information.tracks[0].info.as_ref().unwrap();
+		if query_results_len == 1 {
+			let track_info = query_results[0].info.as_ref().unwrap();
 			reply(
 				ctx,
 				format!(
@@ -155,8 +235,8 @@ pub async fn play(
 			let mut description = String::from("Requested by ");
 			description.push_str(ctx.author().mention().to_string().as_str());
 			description.push('\n');
-			for i in 0..queue_tracks {
-				let track_info = query_information.tracks[i].info.as_ref().unwrap();
+			for (i, track) in query_results.iter().enumerate() {
+				let track_info = track.info.as_ref().unwrap();
 				description.push_str("- [");
 				push_chopped_str(
 					&mut description,
@@ -166,7 +246,7 @@ pub async fn play(
 				description.push_str("](");
 				description.push_str(track_info.uri.as_str());
 				description.push(')');
-				if i < queue_tracks - 1 {
+				if i < query_results_len - 1 {
 					description.push('\n');
 					if description.len() > DESCRIPTION_LENGTH_CUTOFF {
 						description.push_str("*…the rest has been clipped*");
@@ -175,7 +255,7 @@ pub async fn play(
 				}
 			}
 			reply_embed(ctx, |e| {
-				e.title(format!("Added {} Tracks:", queue_tracks))
+				e.title(format!("Added {} Tracks:", query_results_len))
 					.description(description)
 			})
 			.await?;
