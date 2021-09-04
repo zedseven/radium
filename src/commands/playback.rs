@@ -111,12 +111,9 @@ pub async fn play(
 			.msg
 			.attachments
 			.iter()
-			.filter(|a| {
-				dbg!(&a.content_type);
-				match &a.content_type {
-					Some(t) => t.starts_with("audio") || t.starts_with("video"),
-					None => false,
-				}
+			.filter(|a| match &a.content_type {
+				Some(t) => t.starts_with("audio") || t.starts_with("video"),
+				None => false,
 			})
 			.map(|a| (a.url.clone(), a.filename.clone()))
 			.collect::<Vec<(String, String)>>(),

@@ -1,7 +1,7 @@
 use std::{cmp::Reverse, collections::VecDeque, num::ParseIntError, str::FromStr};
 
 use poise::{command, serenity::model::misc::Mentionable};
-use rand::{thread_rng, Rng};
+use rand::{distributions::Uniform, thread_rng, Rng};
 
 use crate::{
 	util::{is_slash_context, reply, reply_embed, reply_plain},
@@ -76,6 +76,14 @@ pub async fn roll(
 				let dice_rolls_len = dice_rolls.len();
 				let display_big_result =
 					dice_rolls_len > 1 || (dice_rolls_len == 1 && dice_rolls[0].len() >= 5);
+
+				// Display the result with maximum 2 decimal places of precision, but strip
+				// off trailing '0's and '.'s so that normal rolls don't have decimals
+				let result_display = format!("{:.2}", result)
+					.trim_end_matches('0')
+					.trim_end_matches('.')
+					.to_owned();
+
 				if display_big_result {
 					if rolls_string.len() > MAX_FIELD_VALUE {
 						rolls_string = String::from("*…clipped because there were too many values*")
@@ -90,7 +98,7 @@ pub async fn roll(
 						e.field("Command:", format!("`{}`", command_slice), false);
 						e.field("Rolls:", rolls_string, false).field(
 							"Result:",
-							format!("`{}`", result),
+							format!("`{}`", result_display),
 							false,
 						)
 					})
@@ -114,17 +122,13 @@ pub async fn roll(
 					display.push_str(rolls_string.as_str());
 					if !(dice_rolls_len == 1
 						&& dice_rolls[0].len() == 1
-						&& (dice_rolls[0][0] as f32).eq(&result))
+						&& (dice_rolls[0][0] as f64).eq(&result))
 					{
 						if !rolls_string.is_empty() {
 							display.push(' ');
 						}
 						display.push_str("Result: `");
-						// Display the result with maximum 2 decimal places of precision, but strip
-						// off trailing '0's and '.'s so that normal rolls don't have decimals
-						let result_display = format!("{:.2}", result);
-						display
-							.push_str(result_display.trim_end_matches('0').trim_end_matches('.'));
+						display.push_str(result_display.as_str());
 						display.push('`');
 					}
 
@@ -146,7 +150,7 @@ pub async fn roll(
 
 #[derive(Debug)]
 enum Evaluable {
-	Num(f32),
+	Num(f64),
 	Dice(Dice),
 	Operator(Operator),
 }
@@ -168,8 +172,9 @@ impl Dice {
 	fn eval(&self) -> (Vec<u32>, u32) {
 		let mut rng = thread_rng();
 		let mut rolls = Vec::new();
+		let range = Uniform::new_inclusive(1, self.size);
 		for _ in 0..self.count {
-			rolls.push(rng.gen_range(1..=self.size));
+			rolls.push(rng.sample(range));
 		}
 
 		let result = match self.modifier {
@@ -282,7 +287,9 @@ enum OperatorType {
 	ParenthesisRight,
 }
 
-/// Parse the roll command into a Reverse Polish Notation expression.
+/// Parse the roll command into a [Reverse Polish Notation](https://en.wikipedia.org/wiki/Reverse_Polish_notation) expression.
+///
+/// This is an implementation of the [Shunting-Yard Algorithm](https://en.wikipedia.org/wiki/Shunting-yard_algorithm).
 fn parse_roll_command(command: &str) -> Option<Vec<Evaluable>> {
 	// Split the command into tokens. Whitespace-separated values and operators are
 	// individual tokens.
@@ -355,7 +362,7 @@ fn parse_roll_command(command: &str) -> Option<Vec<Evaluable>> {
 			output.push(Evaluable::Dice(dice));
 			continue;
 		}
-		if let Ok(value) = token.parse::<f32>() {
+		if let Ok(value) = token.parse::<f64>() {
 			output.push(Evaluable::Num(value));
 			continue;
 		}
@@ -372,7 +379,7 @@ fn parse_roll_command(command: &str) -> Option<Vec<Evaluable>> {
 }
 
 /// Evaluate the Reverse Polish Notation expression into final results.
-fn evaluate_roll_command(rpn: Vec<Evaluable>) -> Option<(f32, Vec<Vec<u32>>)> {
+fn evaluate_roll_command(rpn: Vec<Evaluable>) -> Option<(f64, Vec<Vec<u32>>)> {
 	let mut dice_rolls = Vec::new();
 	let mut stack = VecDeque::new();
 
@@ -381,7 +388,7 @@ fn evaluate_roll_command(rpn: Vec<Evaluable>) -> Option<(f32, Vec<Vec<u32>>)> {
 			Evaluable::Dice(dice) => {
 				let (rolls, value) = dice.eval();
 				dice_rolls.push(rolls);
-				stack.push_front(value as f32);
+				stack.push_front(value as f64);
 			}
 			Evaluable::Num(value) => {
 				stack.push_front(value);
