@@ -114,13 +114,17 @@ pub async fn roll(
 					display.push_str(rolls_string.as_str());
 					if !(dice_rolls_len == 1
 						&& dice_rolls[0].len() == 1
-						&& dice_rolls[0][0] == result)
+						&& (dice_rolls[0][0] as f32).eq(&result))
 					{
 						if !rolls_string.is_empty() {
 							display.push(' ');
 						}
 						display.push_str("Result: `");
-						display.push_str(result.to_string().as_str());
+						// Display the result with maximum 2 decimal places of precision, but strip
+						// off trailing '0's and '.'s so that normal rolls don't have decimals
+						let result_display = format!("{:.2}", result);
+						display
+							.push_str(result_display.trim_end_matches('0').trim_end_matches('.'));
 						display.push('`');
 					}
 
@@ -142,7 +146,7 @@ pub async fn roll(
 
 #[derive(Debug)]
 enum Evaluable {
-	Num(u32),
+	Num(f32),
 	Dice(Dice),
 	Operator(Operator),
 }
@@ -351,7 +355,7 @@ fn parse_roll_command(command: &str) -> Option<Vec<Evaluable>> {
 			output.push(Evaluable::Dice(dice));
 			continue;
 		}
-		if let Ok(value) = token.parse::<u32>() {
+		if let Ok(value) = token.parse::<f32>() {
 			output.push(Evaluable::Num(value));
 			continue;
 		}
@@ -368,7 +372,7 @@ fn parse_roll_command(command: &str) -> Option<Vec<Evaluable>> {
 }
 
 /// Evaluate the Reverse Polish Notation expression into final results.
-fn evaluate_roll_command(rpn: Vec<Evaluable>) -> Option<(u32, Vec<Vec<u32>>)> {
+fn evaluate_roll_command(rpn: Vec<Evaluable>) -> Option<(f32, Vec<Vec<u32>>)> {
 	let mut dice_rolls = Vec::new();
 	let mut stack = VecDeque::new();
 
@@ -377,7 +381,7 @@ fn evaluate_roll_command(rpn: Vec<Evaluable>) -> Option<(u32, Vec<Vec<u32>>)> {
 			Evaluable::Dice(dice) => {
 				let (rolls, value) = dice.eval();
 				dice_rolls.push(rolls);
-				stack.push_front(value);
+				stack.push_front(value as f32);
 			}
 			Evaluable::Num(value) => {
 				stack.push_front(value);
@@ -389,7 +393,7 @@ fn evaluate_roll_command(rpn: Vec<Evaluable>) -> Option<(u32, Vec<Vec<u32>>)> {
 				let right = stack.pop_front().unwrap();
 				let left = stack.pop_front().unwrap();
 				let value = match op.op {
-					OperatorType::Exponent => left.pow(right),
+					OperatorType::Exponent => left.powf(right),
 					OperatorType::Multiply => left * right,
 					OperatorType::Divide => left / right,
 					OperatorType::Add => left + right,
