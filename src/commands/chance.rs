@@ -13,12 +13,13 @@ const ANNOTATION_CHAR: char = '!';
 const OPERATOR_SYMBOLS: [char; 10] = ['^', '*', '×', 'x', '/', '÷', '+', '-', '(', ')'];
 const MAX_FIELD_VALUE: usize = 1024;
 
-/// Roll a die.
+/// Roll dice with arbitrary mathematical operations applied.
 #[command(slash_command, aliases("eval", "evaluate"))]
 pub async fn roll(
 	ctx: PoiseContext<'_>,
 	#[rest]
-	#[description = "The dice to roll."]
+	#[description = "The dice to roll. Follow the command with `!` to annotate what the roll is \
+	                 for."]
 	command: String,
 ) -> Result<(), Error> {
 	let slash_command = is_slash_context(&ctx);
