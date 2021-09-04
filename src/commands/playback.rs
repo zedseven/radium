@@ -38,7 +38,7 @@ pub async fn join(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		}
 	};
 
-	let manager = songbird::get(ctx.discord()).await.unwrap().clone();
+	let manager = ctx.data().songbird.clone();
 
 	let (_, handler) = manager.join_gateway(guild.id, channel_id).await;
 
@@ -72,7 +72,7 @@ pub async fn leave(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		}
 	};
 
-	let manager = songbird::get(ctx.discord()).await.unwrap().clone();
+	let manager = ctx.data().songbird.clone();
 
 	if manager.get(guild.id).is_some() {
 		if let Err(e) = manager.remove(guild.id).await {
@@ -120,7 +120,7 @@ pub async fn play(
 		PoiseContext::Slash(_) => Vec::new(),
 	};
 
-	let manager = songbird::get(ctx.discord()).await.unwrap().clone();
+	let manager = ctx.data().songbird.clone();
 
 	if let Some(_handler) = manager.get(guild.id) {
 		let lava_client = &ctx.data().lavalink;

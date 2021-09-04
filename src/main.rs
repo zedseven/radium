@@ -4,7 +4,7 @@ mod commands;
 mod constants;
 mod util;
 
-use std::{collections::HashSet, env::var, error, time::Duration};
+use std::{collections::HashSet, env::var, error, sync::Arc, time::Duration};
 
 use anyhow::Context;
 use lavalink_rs::{gateway::LavalinkEventHandler, LavalinkClient};
@@ -20,7 +20,7 @@ use poise::{
 	},
 	Framework,
 };
-use songbird::SerenityInit;
+use songbird::{SerenityInit, Songbird};
 
 use crate::{commands::*, constants::PREFIX};
 
@@ -37,6 +37,7 @@ pub type PrefixContext<'a> = poise::PrefixContext<'a, Data, Error>;
 pub type SerenityContext = serenity::client::Context;
 
 pub struct Data {
+	songbird: Arc<Songbird>,
 	lavalink: LavalinkClient,
 }
 
@@ -123,12 +124,15 @@ async fn main() -> Result<(), Error> {
 		.await
 		.with_context(|| "Failed to start the Lavalink client")?;
 
+	let songbird = Songbird::serenity();
+	let songbird_clone = songbird.clone(); // Required because the closure that uses it moves the value
 	let framework = Framework::new(
 		PREFIX.to_owned(),
 		ApplicationId(app_id.0),
 		move |_ctx, _ready, _framework| {
 			Box::pin(async move {
 				Ok(Data {
+					songbird: songbird_clone,
 					lavalink: lava_client,
 				})
 			})
@@ -140,7 +144,7 @@ async fn main() -> Result<(), Error> {
 		.start(
 			Client::builder(&token)
 				.raw_event_handler(Handler)
-				.register_songbird(),
+				.register_songbird_with(songbird),
 		)
 		.await
 		.with_context(|| "Failed to start up".to_owned())?;
