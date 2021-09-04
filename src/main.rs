@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 mod commands;
 mod constants;
 mod util;
@@ -107,6 +109,7 @@ async fn main() -> Result<(), Error> {
 	options.command(play(), |f| f);
 	options.command(skip(), |f| f);
 	options.command(now_playing(), |f| f);
+	options.command(roll(), |f| f);
 
 	let lava_client = LavalinkClient::builder(app_id.0)
 		.set_host(var(LAVALINK_HOST_VAR).unwrap_or_else(|_| LAVALINK_HOST_DEFAULT.to_owned()))

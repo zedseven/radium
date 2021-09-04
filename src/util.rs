@@ -9,6 +9,12 @@ pub async fn reply<S: ToString>(ctx: PoiseContext<'_>, msg: S) -> Result<(), Err
 		.with_context(|| "Failed to send message")
 }
 
+pub async fn reply_plain<S: ToString>(ctx: PoiseContext<'_>, msg: S) -> Result<(), Error> {
+	send_reply(ctx, |m| m.content(msg.to_string()))
+		.await
+		.with_context(|| "Failed to send message")
+}
+
 pub async fn reply_embed(
 	ctx: PoiseContext<'_>,
 	embed: impl FnOnce(&mut CreateEmbed) -> &mut CreateEmbed,
@@ -33,4 +39,11 @@ pub fn chop_str(s: &str, max_len: usize) -> String {
 	let mut base = String::new();
 	push_chopped_str(&mut base, s, max_len);
 	base
+}
+
+pub fn is_slash_context(ctx: &PoiseContext<'_>) -> bool {
+	match ctx {
+		PoiseContext::Slash(_) => true,
+		PoiseContext::Prefix(_) => false,
+	}
 }

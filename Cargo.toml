@@ -6,6 +6,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 lavalink-rs = { git = "https://gitlab.com/vicky5124/lavalink-rs", features = ["rustls"] }
+rand = "0.8"
 songbird = { version = "0.2", default-features = false, features = ["serenity-rustls", "gateway"] }
 poise = { git = "https://github.com/kangalioo/poise" }
 tokio = { version = "1.10", features = ["macros", "rt-multi-thread"] }

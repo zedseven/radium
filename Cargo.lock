@@ -872,6 +872,7 @@ dependencies = [
  "anyhow",
  "lavalink-rs",
  "poise",
+ "rand",
  "songbird",
  "tokio",
  "url",

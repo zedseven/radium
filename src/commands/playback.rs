@@ -93,7 +93,7 @@ pub async fn leave(ctx: PoiseContext<'_>) -> Result<(), Error> {
 pub async fn play(
 	ctx: PoiseContext<'_>,
 	#[rest]
-	#[description = "What to play"]
+	#[description = "What to play."]
 	query: String,
 ) -> Result<(), Error> {
 	let guild = match ctx.guild() {

@@ -1,4 +1,5 @@
+mod chance;
 mod playback;
 mod util;
 
-pub use self::{playback::*, util::*};
+pub use self::{chance::*, playback::*, util::*};
