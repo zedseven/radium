@@ -38,7 +38,7 @@ pub async fn join(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		}
 	};
 
-	let manager = ctx.data().songbird.clone();
+	let manager = &ctx.data().songbird;
 
 	let (_, handler) = manager.join_gateway(guild.id, channel_id).await;
 
@@ -72,7 +72,7 @@ pub async fn leave(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		}
 	};
 
-	let manager = ctx.data().songbird.clone();
+	let manager = &ctx.data().songbird;
 
 	if manager.get(guild.id).is_some() {
 		if let Err(e) = manager.remove(guild.id).await {
@@ -120,7 +120,7 @@ pub async fn play(
 		PoiseContext::Slash(_) => Vec::new(),
 	};
 
-	let manager = ctx.data().songbird.clone();
+	let manager = &ctx.data().songbird;
 
 	if let Some(_handler) = manager.get(guild.id) {
 		let lava_client = &ctx.data().lavalink;
@@ -149,7 +149,7 @@ pub async fn play(
 		let is_url = Url::parse(query.trim()).is_ok();
 
 		// If the query was a URL, then it's likely a playlist where all retrieved
-		// tracks are desired - otherwise, it's just the top result
+		// tracks are desired - otherwise, only queue the top result
 		let query_tracks = if is_url {
 			query_information.tracks.len()
 		} else {
