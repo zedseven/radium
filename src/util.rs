@@ -47,3 +47,26 @@ pub fn is_slash_context(ctx: &PoiseContext<'_>) -> bool {
 		PoiseContext::Prefix(_) => false,
 	}
 }
+
+pub fn display_time_span(millis: u64) -> String {
+	const MILLIS_PER_SECOND: u64 = 1000;
+	const SECONDS_PER_MINUTE: u64 = 60;
+	const MINUTES_PER_HOUR: u64 = 60;
+	const MILLIS_PER_MINUTE: u64 = MILLIS_PER_SECOND * SECONDS_PER_MINUTE;
+	const MILLIS_PER_HOUR: u64 = MILLIS_PER_MINUTE * MINUTES_PER_HOUR;
+
+	if millis >= MILLIS_PER_HOUR {
+		format!(
+			"{:02}:{:02}:{:02}",
+			millis / MILLIS_PER_HOUR,
+			(millis / MILLIS_PER_MINUTE) % MINUTES_PER_HOUR,
+			(millis / MILLIS_PER_SECOND) % SECONDS_PER_MINUTE
+		)
+	} else {
+		format!(
+			"{:02}:{:02}",
+			millis / MILLIS_PER_MINUTE,
+			(millis / MILLIS_PER_SECOND) % SECONDS_PER_MINUTE
+		)
+	}
+}

@@ -15,7 +15,7 @@ use songbird::{
 use url::Url;
 
 use crate::{
-	util::{chop_str, push_chopped_str, reply, reply_embed},
+	util::{chop_str, display_time_span, push_chopped_str, reply, reply_embed},
 	Error,
 	PoiseContext,
 };
@@ -182,8 +182,8 @@ pub async fn play(
 
 				// Queue it up
 				let mut query_result = lava_client.auto_search_tracks(&attachment.url).await?;
-				for t in &mut query_result.tracks {
-					t.info = match &t.info {
+				for track in &mut query_result.tracks {
+					track.info = match &track.info {
 						Some(old_info) => {
 							let mut new_info = old_info.clone();
 							if old_info.title == UNKNOWN_TITLE {
@@ -351,8 +351,36 @@ pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 }
 
 /// Show what's currently playing.
-#[command(slash_command, aliases("nowplaying", "np", "current"))]
+#[command(slash_command, aliases("nowplaying", "np", "current", "rn"))]
 pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
+	fn create_progress_display(length: Option<u64>, position: u64) -> String {
+		const EMPTY_BLOCK: char = '▱';
+		const FULL_BLOCK: char = '▰';
+		const PROGRESS_BAR_SIZE: u64 = 10;
+
+		let mut ret = String::new();
+		match length {
+			Some(length_actual) => {
+				ret.push_str(display_time_span(position).as_str());
+				ret.push(' ');
+				let fill_point = position * PROGRESS_BAR_SIZE / length_actual;
+				for _ in 0..fill_point {
+					ret.push(FULL_BLOCK);
+				}
+				for _ in fill_point..PROGRESS_BAR_SIZE {
+					ret.push(EMPTY_BLOCK);
+				}
+				ret.push(' ');
+				ret.push_str(display_time_span(length_actual).as_str());
+			}
+			None => {
+				ret.push_str(display_time_span(position).as_str());
+				ret.push_str(" 🔴 **LIVE**");
+			}
+		}
+		ret
+	}
+
 	let guild = match ctx.guild() {
 		Some(guild) => guild,
 		None => {
@@ -365,11 +393,33 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 
 	let mut something_playing = false;
 	if let Some(node) = lava_client.nodes().await.get(&guild.id.0) {
-		if let Some(track) = &node.now_playing {
-			reply(
-				ctx,
-				format!("Now Playing: {}", track.track.info.as_ref().unwrap().title),
-			)
+		if let Some(now_playing) = &node.now_playing {
+			let track_info = now_playing.track.info.as_ref().unwrap();
+			dbg!(&now_playing);
+			reply_embed(ctx, |e| {
+				e.title("Now Playing")
+					.field(
+						"Track:",
+						format!(
+							"[{}]({})",
+							chop_str(track_info.title.as_str(), MAX_SINGLE_ENTRY_LENGTH),
+							track_info.uri,
+						),
+						false,
+					)
+					.field(
+						"Progress:",
+						create_progress_display(
+							if track_info.is_stream {
+								None
+							} else {
+								Some(track_info.length)
+							},
+							track_info.position,
+						),
+						false,
+					)
+			})
 			.await?;
 			something_playing = true;
 		}
