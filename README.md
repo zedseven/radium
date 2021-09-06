@@ -1,7 +1,7 @@
 # Radium (Radio) Bot
 A simple music bot made for personal use.
 
-I made this for use by my friends and I on Discord.
+I made this for use by my friends and I on [Discord](https://discord.com/).
 You're welcome to use it if you want to, but it isn't intended for
 widespread use.
 
