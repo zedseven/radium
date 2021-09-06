@@ -325,6 +325,7 @@ pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let lava_client = &ctx.data().lavalink;
 
 	if let Some(track) = lava_client.skip(guild.id.0).await {
+		let track_info = track.track.info.as_ref().unwrap();
 		if lava_client
 			.nodes()
 			.await
@@ -340,7 +341,11 @@ pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		}
 		reply(
 			ctx,
-			format!("Skipped: {}", track.track.info.as_ref().unwrap().title),
+			format!(
+				"Skipped: [{}]({})",
+				chop_str(track_info.title.as_str(), MAX_SINGLE_ENTRY_LENGTH),
+				track_info.uri
+			),
 		)
 		.await?;
 	} else {
