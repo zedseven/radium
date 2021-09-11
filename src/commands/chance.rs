@@ -171,8 +171,8 @@ enum DiceModifier {
 
 impl Dice {
 	fn eval(&self) -> (Vec<u32>, u32) {
-		let mut rng = thread_rng();
 		let mut rolls = Vec::new();
+		let mut rng = thread_rng();
 		let range = Uniform::new_inclusive(1, self.size);
 		for _ in 0..self.count {
 			rolls.push(rng.sample(range));
@@ -239,9 +239,13 @@ impl FromStr for Dice {
 		};
 		let modifier = match mod_index {
 			Some(i) => {
-				let n = remaining[(i + 1)..]
-					.parse::<u32>()
-					.map_err(ParseDiceError::Int)?;
+				let n = if i + 1 < remaining.len() {
+					remaining[(i + 1)..]
+						.parse::<u32>()
+						.map_err(ParseDiceError::Int)?
+				} else {
+					1
+				};
 				if n > dice_count {
 					return Err(ParseDiceError::Value);
 				}
