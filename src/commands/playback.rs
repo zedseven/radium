@@ -356,7 +356,7 @@ pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 }
 
 /// Show what's currently playing.
-#[command(slash_command, aliases("nowplaying", "np", "current", "rn"))]
+#[command(slash_command, rename = "nowplaying", aliases("np", "current", "rn"))]
 pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	fn create_progress_display(length: Option<u64>, position: u64) -> String {
 		const EMPTY_BLOCK: char = '▱';
