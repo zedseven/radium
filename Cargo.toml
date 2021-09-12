@@ -6,9 +6,11 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 lavalink-rs = { git = "https://gitlab.com/vicky5124/lavalink-rs", features = ["rustls"] }
+lazy_static = "1.4"
 rand = "0.8"
 songbird = { version = "0.2", default-features = false, features = ["serenity-rustls", "gateway"] }
 poise = { git = "https://github.com/kangalioo/poise" }
+regex = "1.5"
 tokio = { version = "1.10", features = ["macros", "rt-multi-thread"] }
 url = "2.2"
 

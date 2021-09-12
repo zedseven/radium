@@ -871,8 +871,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "lavalink-rs",
+ "lazy_static",
  "poise",
  "rand",
+ "regex",
  "songbird",
  "tokio",
  "url",
