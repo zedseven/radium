@@ -165,7 +165,7 @@ pub async fn play(
 		}
 	}
 
-	let mut query_results = Vec::new();
+	let mut queueable_tracks = Vec::new();
 
 	// Queue up any attachments
 	match ctx {
@@ -194,7 +194,7 @@ pub async fn play(
 						None => None,
 					}
 				}
-				query_results.extend_from_slice(&query_result.tracks)
+				queueable_tracks.extend_from_slice(&query_result.tracks)
 			}
 		}
 		PoiseContext::Slash(_) => {}
@@ -214,7 +214,7 @@ pub async fn play(
 		1
 	};
 
-	query_results.extend_from_slice(
+	queueable_tracks.extend_from_slice(
 		&query_information
 			.tracks
 			.iter()
@@ -223,18 +223,18 @@ pub async fn play(
 			.collect::<Vec<Track>>(),
 	);
 
-	if query_results.is_empty() {
+	if queueable_tracks.is_empty() {
 		reply(ctx, "Could not find anything for the search query.").await?;
 		return Ok(());
 	}
 
-	let query_results_len = query_results.len();
+	let queueable_tracks_len = queueable_tracks.len();
 
 	// For URLs that point to raw files, Lavalink seems to just return them with a
 	// title of "Unknown title" - this is a slightly hacky solution to set the title
 	// to the filename of the raw file
 	if is_url && query_tracks == 1 {
-		let track_info = &mut query_results[query_results_len - 1];
+		let track_info = &mut queueable_tracks[queueable_tracks_len - 1];
 		if track_info.info.is_some() && track_info.info.as_ref().unwrap().title.eq(UNKNOWN_TITLE) {
 			track_info.info = match &track_info.info {
 				Some(old_info) => {
@@ -257,17 +257,29 @@ pub async fn play(
 	}
 
 	// Queue the tracks up
-	for track in &query_results {
-		if let Err(e) = lava_client.play(guild.id.0, track.clone()).queue().await {
+	for track in &queueable_tracks {
+		if let Err(e) = lava_client
+			.play(guild.id.0, track.clone())
+			.requester(ctx.author().id.0)
+			.queue()
+			.await
+		{
 			reply(ctx, "Failed to queue up query result.").await?;
 			eprintln!("Failed to queue up query result: {}", e);
 			return Ok(());
 		};
 	}
 
+	// Update the queued count for the guild
+	{
+		let mut hash_map = ctx.data().queued_count.lock().unwrap();
+		let queued_count = hash_map.entry(guild.id).or_default();
+		*queued_count += queueable_tracks_len;
+	}
+
 	// Notify the user of the added tracks
-	if query_results_len == 1 {
-		let track_info = query_results[0].info.as_ref().unwrap();
+	if queueable_tracks_len == 1 {
+		let track_info = queueable_tracks[0].info.as_ref().unwrap();
 		reply(
 			ctx,
 			format!(
@@ -279,31 +291,27 @@ pub async fn play(
 		)
 		.await?;
 	} else {
-		let mut description = String::from("Requested by ");
-		description.push_str(ctx.author().mention().to_string().as_str());
-		description.push('\n');
-		for (i, track) in query_results.iter().enumerate() {
+		let mut desc = String::from("Requested by ");
+		desc.push_str(ctx.author().mention().to_string().as_str());
+		desc.push('\n');
+		for (i, track) in queueable_tracks.iter().enumerate() {
 			let track_info = track.info.as_ref().unwrap();
-			description.push_str("- [");
-			push_chopped_str(
-				&mut description,
-				track_info.title.as_str(),
-				MAX_LIST_ENTRY_LENGTH,
-			);
-			description.push_str("](");
-			description.push_str(track_info.uri.as_str());
-			description.push(')');
-			if i < query_results_len - 1 {
-				description.push('\n');
-				if description.len() > DESCRIPTION_LENGTH_CUTOFF {
-					description.push_str("*…the rest has been clipped*");
+			desc.push_str("- [");
+			push_chopped_str(&mut desc, track_info.title.as_str(), MAX_LIST_ENTRY_LENGTH);
+			desc.push_str("](");
+			desc.push_str(track_info.uri.as_str());
+			desc.push(')');
+			if i < queueable_tracks_len - 1 {
+				desc.push('\n');
+				if desc.len() > DESCRIPTION_LENGTH_CUTOFF {
+					desc.push_str("*…the rest has been clipped*");
 					break;
 				}
 			}
 		}
 		reply_embed(ctx, |e| {
-			e.title(format!("Added {} Tracks:", query_results_len))
-				.description(description)
+			e.title(format!("Added {} Tracks:", queueable_tracks_len))
+				.description(desc)
 		})
 		.await?;
 	}
@@ -312,7 +320,7 @@ pub async fn play(
 }
 
 /// Skip the current track.
-#[command(slash_command, aliases("next", "stop"))]
+#[command(slash_command, aliases("next", "stop", "n", "s"))]
 pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild = match ctx.guild() {
 		Some(guild) => guild,
@@ -326,6 +334,7 @@ pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 
 	if let Some(track) = lava_client.skip(guild.id.0).await {
 		let track_info = track.track.info.as_ref().unwrap();
+		// If the queue is now empty, the player needs to be stopped
 		if lava_client
 			.nodes()
 			.await
@@ -350,6 +359,35 @@ pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		.await?;
 	} else {
 		reply(ctx, "Nothing to skip.").await?;
+	}
+
+	Ok(())
+}
+
+/// Clear the queue.
+#[command(slash_command, aliases("c"))]
+pub async fn clear(ctx: PoiseContext<'_>) -> Result<(), Error> {
+	let guild = match ctx.guild() {
+		Some(guild) => guild,
+		None => {
+			reply(ctx, "You must use this command from within a server.").await?;
+			return Ok(());
+		}
+	};
+
+	let lava_client = &ctx.data().lavalink;
+
+	while lava_client.skip(guild.id.0).await.is_some() {}
+	lava_client
+		.stop(guild.id.0)
+		.await
+		.with_context(|| "Failed to stop playback of the current track".to_owned())?;
+	reply(ctx, "The queue is now empty.").await?;
+
+	{
+		let mut hash_map = ctx.data().queued_count.lock().unwrap();
+		let queued_count = hash_map.entry(guild.id).or_default();
+		*queued_count = 0;
 	}
 
 	Ok(())
@@ -400,7 +438,6 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	if let Some(node) = lava_client.nodes().await.get(&guild.id.0) {
 		if let Some(now_playing) = &node.now_playing {
 			let track_info = now_playing.track.info.as_ref().unwrap();
-			dbg!(&now_playing);
 			reply_embed(ctx, |e| {
 				e.title("Now Playing")
 					.field(
@@ -410,6 +447,17 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 							chop_str(track_info.title.as_str(), MAX_SINGLE_ENTRY_LENGTH),
 							track_info.uri,
 						),
+						false,
+					)
+					.field(
+						"Requested By:",
+						UserId(
+							now_playing
+								.requester
+								.expect("Expected a requester associated with a playing track")
+								.0,
+						)
+						.mention(),
 						false,
 					)
 					.field(
@@ -431,6 +479,71 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	}
 	if !something_playing {
 		reply(ctx, "Nothing is playing at the moment.").await?;
+	}
+
+	Ok(())
+}
+
+/// Show the playback queue.
+#[command(slash_command, aliases("q"))]
+pub async fn queue(ctx: PoiseContext<'_>) -> Result<(), Error> {
+	let guild = match ctx.guild() {
+		Some(guild) => guild,
+		None => {
+			reply(ctx, "You must use this command from within a server.").await?;
+			return Ok(());
+		}
+	};
+
+	let lava_client = &ctx.data().lavalink;
+
+	let mut something_in_queue = false;
+	if let Some(node) = lava_client.nodes().await.get(&guild.id.0) {
+		let queue = &node.queue;
+		let queue_len = queue.len();
+
+		if queue_len > 0 {
+			something_in_queue = true;
+
+			let global_queued_count = {
+				let guild_id = ctx.guild().unwrap().id;
+				let mut hash_map = ctx.data().queued_count.lock().unwrap();
+				*hash_map.entry(guild_id).or_default()
+			};
+			let entry_offset = global_queued_count - queue_len;
+			let number_width = global_queued_count.log10() as usize + 1;
+
+			let mut desc = String::new();
+			for (i, queued_track) in queue.iter().enumerate() {
+				let track_info = queued_track.track.info.as_ref().unwrap();
+				desc.push('`');
+				desc.push_str(format!("{:01$}", entry_offset + i + 1, number_width).as_str());
+				desc.push_str(".` [");
+				push_chopped_str(&mut desc, track_info.title.as_str(), MAX_LIST_ENTRY_LENGTH);
+				desc.push_str("](");
+				desc.push_str(track_info.uri.as_str());
+				desc.push(')');
+				if i < queue_len - 1 {
+					desc.push('\n');
+					if desc.len() > DESCRIPTION_LENGTH_CUTOFF {
+						desc.push_str("*…the rest has been clipped*");
+						break;
+					}
+				}
+			}
+			reply_embed(ctx, |e| {
+				e.title(format!(
+					"Queue ({} total track{}):",
+					queue_len,
+					if queue_len != 1 { "s" } else { "" }
+				))
+				.description(desc)
+			})
+			.await?;
+		}
+	}
+	if !something_in_queue {
+		reply(ctx, "Nothing is in the queue.").await?;
 	}
 
 	Ok(())

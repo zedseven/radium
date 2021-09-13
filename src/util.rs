@@ -44,10 +44,10 @@ pub fn push_chopped_str(base: &mut String, new_str: &str, max_len: usize) {
 	const ELLIPSIS: char = '…';
 
 	if new_str.len() > max_len {
-		base.push_str(escape_str(&new_str[0..(max_len - 1)]).as_str());
+		base.push_str(escape_str(&new_str[0..(max_len - 1)]).trim_end());
 		base.push(ELLIPSIS);
 	} else {
-		base.push_str(new_str);
+		base.push_str(escape_str(new_str).as_str());
 	}
 }
 

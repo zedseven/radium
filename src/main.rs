@@ -1,10 +1,17 @@
+#![feature(int_log)]
 #![allow(dead_code)]
 
 mod commands;
 mod constants;
 mod util;
 
-use std::{collections::HashSet, env::var, error, sync::Arc, time::Duration};
+use std::{
+	collections::{HashMap, HashSet},
+	env::var,
+	error,
+	sync::{Arc, Mutex},
+	time::Duration,
+};
 
 use anyhow::Context;
 use lavalink_rs::{gateway::LavalinkEventHandler, LavalinkClient};
@@ -15,7 +22,11 @@ use poise::{
 		async_trait,
 		client::{parse_token, RawEventHandler},
 		http::Http,
-		model::{event::Event, gateway::Ready, id::ApplicationId},
+		model::{
+			event::Event,
+			gateway::Ready,
+			id::{ApplicationId, GuildId},
+		},
 		Client,
 	},
 	Framework,
@@ -39,6 +50,7 @@ pub type SerenityContext = serenity::client::Context;
 pub struct Data {
 	songbird: Arc<Songbird>,
 	lavalink: LavalinkClient,
+	queued_count: Mutex<HashMap<GuildId, usize>>,
 }
 
 struct Handler;
@@ -109,7 +121,9 @@ async fn main() -> Result<(), Error> {
 	options.command(leave(), |f| f);
 	options.command(play(), |f| f);
 	options.command(skip(), |f| f);
+	options.command(clear(), |f| f);
 	options.command(now_playing(), |f| f);
+	options.command(queue(), |f| f);
 	options.command(roll(), |f| f);
 
 	let lava_client = LavalinkClient::builder(app_id.0)
@@ -134,6 +148,7 @@ async fn main() -> Result<(), Error> {
 				Ok(Data {
 					songbird: songbird_clone,
 					lavalink: lava_client,
+					queued_count: Mutex::new(HashMap::new()),
 				})
 			})
 		},
