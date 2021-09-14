@@ -14,6 +14,7 @@ use std::{
 };
 
 use anyhow::Context;
+use dotenv::dotenv;
 use lavalink_rs::{gateway::LavalinkEventHandler, LavalinkClient};
 use poise::{
 	defaults::on_error,
@@ -81,6 +82,10 @@ impl LavalinkEventHandler for LavalinkHandler {
 /// Entry point.
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+	// Load environment variables
+	dotenv().ok();
+
+	// Prepare basic bot information
 	let token = var(TOKEN_VAR).with_context(|| {
 		format!(
 			"Expected the discord token in the environment variable {}",
@@ -114,6 +119,7 @@ async fn main() -> Result<(), Error> {
 		..Default::default()
 	};
 
+	// Command Initialization
 	// Utility
 	options.command(register(), |f| f);
 	options.command(help(), |f| f);
@@ -133,6 +139,7 @@ async fn main() -> Result<(), Error> {
 	// Chance
 	options.command(roll(), |f| f);
 
+	// Start up the bot
 	let lava_client = LavalinkClient::builder(app_id.0)
 		.set_host(var(LAVALINK_HOST_VAR).unwrap_or_else(|_| LAVALINK_HOST_DEFAULT.to_owned()))
 		.set_password(var(LAVALINK_PASSWORD_VAR).with_context(|| {

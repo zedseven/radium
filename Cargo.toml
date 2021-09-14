@@ -5,6 +5,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+dotenv = "0.15"
 lavalink-rs = { git = "https://gitlab.com/vicky5124/lavalink-rs", features = ["rustls"] }
 lazy_static = "1.4"
 parse_duration = "2.1"

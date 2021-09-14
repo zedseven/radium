@@ -12,5 +12,8 @@
 # JetBrains IDEs' config & project settings directory
 **/.idea/
 
+# The environment variable file containing the bot token etc.
+**/.env
+
 # The Lavalink server directory
 /lavalink/
