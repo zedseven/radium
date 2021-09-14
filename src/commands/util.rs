@@ -25,8 +25,13 @@ pub async fn register(ctx: PrefixContext<'_>, #[flag] local: bool) -> Result<(),
 	Ok(())
 }
 
-/// Information about available commands.
-#[command(slash_command)]
+/// Get information about available commands. Use `/help help` for more info.
+///
+/// Calling this command with the name of another command will give you a more
+/// detailed description of what the command does, and how to use it.
+///
+/// Of course, if you're seeing this, you already know you can do that.
+#[command(slash_command, track_edits)]
 pub async fn help(
 	ctx: PoiseContext<'_>,
 	#[description = "A specific command to show help about."] command: Option<String>,
@@ -35,8 +40,9 @@ pub async fn help(
 		ctx,
 		command.as_deref(),
 		format!(
-			"You can also use commands with a '{0}' instead of a slash, eg. '{0}help' instead of \
-			 '/help'.",
+			"You can also use commands with a `{0}` instead of a slash, eg. `{0}help` instead of \
+			 `/help`.\nEdit your message to the bot and the bot will edit it's response for this \
+			 help dialog.",
 			PREFIX
 		)
 		.as_str(),
@@ -46,7 +52,9 @@ pub async fn help(
 	Ok(())
 }
 
-/// Information about Radium.
+/// Get basic information about Radium.
+///
+/// There isn't much else to say - just use the command.
 #[command(slash_command)]
 pub async fn about(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	reply_embed(ctx, |e| {
@@ -65,6 +73,12 @@ pub async fn about(ctx: PoiseContext<'_>) -> Result<(), Error> {
 }
 
 /// Ping Radium.
+///
+/// Perhaps at some point in the future this will display the latency, but for
+/// now it's pretty much useless.
+///
+/// It's sticking around for posterity and as a quick way to test if the bot is
+/// operational.
 #[command(slash_command)]
 pub async fn ping(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	reply(ctx, "Pong!").await?;

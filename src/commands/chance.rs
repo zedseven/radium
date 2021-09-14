@@ -13,7 +13,18 @@ const ANNOTATION_CHAR: char = '!';
 const OPERATOR_SYMBOLS: [char; 10] = ['^', '*', '×', 'x', '/', '÷', '+', '-', '(', ')'];
 const MAX_FIELD_VALUE: usize = 1024;
 
-/// Roll dice with arbitrary mathematical operations applied.
+/// Roll as many dice as you want, and do whatever math you need to do with
+/// their roll results.
+///
+/// Dice rolls are specified as `<count>d<size>`, eg. `2d8`. If the count is 1,
+/// you can leave it off. (eg. `d20`)
+///
+/// Dice rolls also support (dis)advantage. Simply put a `b` (for best) or `w`
+/// (for worst) on the end of the roll, eg. `3d10b2`. Again, if you only want
+/// the best 1, you can leave it off. (eg. `2d20w` for disadvantage)
+///
+/// You can do whatever math you want with the dice values, or even do pure math
+/// with no dice involved. (eg. `/roll (2d20b + 1d8) ^ 2 / 3`)
 #[command(slash_command, aliases("eval", "evaluate"))]
 pub async fn roll(
 	ctx: PoiseContext<'_>,

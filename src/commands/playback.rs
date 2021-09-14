@@ -124,7 +124,15 @@ pub async fn leave(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	Ok(())
 }
 
-/// Play something.
+/// Queue up a song or playlist from YouTube, Twitch, Vimeo, SoundCloud, etc.
+/// Spotify is sadly not supported.
+///
+/// If Radium is provided with a URL, it will queue up all tracks it finds.
+/// Otherwise it will search the query on YouTube and queue up the first result.
+/// Age-restricted videos likely won't work.
+///
+/// You may also use this command with attachments (audio or video files),
+/// though in that case you have to use the non-slash version of the command.
 #[command(slash_command, aliases("p"))]
 pub async fn play(
 	ctx: PoiseContext<'_>,
@@ -365,7 +373,9 @@ pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	Ok(())
 }
 
-/// Pause playback.
+/// Pause the current track.
+///
+/// The opposite of `resume`.
 #[command(slash_command)]
 pub async fn pause(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild = match ctx.guild() {
@@ -389,7 +399,9 @@ pub async fn pause(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	Ok(())
 }
 
-/// Resume playback.
+/// Resume the current track.
+///
+/// The opposite of `pause`.
 #[command(slash_command)]
 pub async fn resume(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild = match ctx.guild() {
@@ -413,7 +425,12 @@ pub async fn resume(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	Ok(())
 }
 
-/// Seek to a specific time.
+/// Seek to a specific time in the current track.
+///
+/// You can specify the time to skip to as a timecode (`2:35`) or as individual
+/// time values (`2m35s`).
+///
+/// If the time specified is past the end of the track, the track ends.
 #[command(slash_command, aliases("scrub", "jump"))]
 pub async fn seek(
 	ctx: PoiseContext<'_>,
@@ -526,6 +543,10 @@ pub async fn seek(
 }
 
 /// Clear the playback queue.
+///
+/// In addition to clearing the queue, this also resets the queue position for
+/// new tracks. This is the only way this happens other than when the bot goes
+/// offline.
 #[command(slash_command, aliases("c"))]
 pub async fn clear(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild = match ctx.guild() {
@@ -554,8 +575,16 @@ pub async fn clear(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	Ok(())
 }
 
-/// Show what's currently playing.
-#[command(slash_command, rename = "nowplaying", aliases("np", "current", "rn"))]
+/// Show what's currently playing, and how far in you are in the track.
+///
+/// If the track has a defined end point, a progress bar will be displayed.
+/// Otherwise, if the track is a live stream, only the time it's been playing
+/// will be displayed.
+#[command(
+	slash_command,
+	rename = "nowplaying",
+	aliases("np", "position", "current", "rn")
+)]
 pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	fn create_progress_display(length: Option<u64>, position: u64) -> String {
 		const EMPTY_BLOCK: char = '▱';
