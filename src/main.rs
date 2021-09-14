@@ -116,6 +116,7 @@ async fn main() -> Result<(), Error> {
 
 	// Utility
 	options.command(register(), |f| f);
+	options.command(help(), |f| f);
 	options.command(about(), |f| f);
 	options.command(ping(), |f| f);
 	// Playback
