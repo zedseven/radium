@@ -530,11 +530,11 @@ pub async fn queue(ctx: PoiseContext<'_>) -> Result<(), Error> {
 				}
 			}
 			reply_embed(ctx, |e| {
-				e.title(format!(
-					"Queue ({} total track{}):",
-					queue_len,
-					if queue_len != 1 { "s" } else { "" }
-				))
+				e.title(if queue_len != 1 {
+					format!("Queue ({} total tracks):", queue_len)
+				} else {
+					format!("Queue ({} total track):", queue_len)
+				})
 				.description(desc)
 			})
 			.await?;
