@@ -364,7 +364,7 @@ pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	Ok(())
 }
 
-/// Clear the queue.
+/// Clear the playback queue.
 #[command(slash_command, aliases("c"))]
 pub async fn clear(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild = match ctx.guild() {
@@ -516,9 +516,7 @@ pub async fn queue(ctx: PoiseContext<'_>) -> Result<(), Error> {
 			let mut desc = String::new();
 			for (i, queued_track) in queue.iter().enumerate() {
 				let track_info = queued_track.track.info.as_ref().unwrap();
-				desc.push('`');
-				desc.push_str(format!("{:01$}", entry_offset + i + 1, number_width).as_str());
-				desc.push_str(".` [");
+				desc.push_str(format!("`{:01$}.` [", entry_offset + i + 1, number_width).as_str());
 				push_chopped_str(&mut desc, track_info.title.as_str(), MAX_LIST_ENTRY_LENGTH);
 				desc.push_str("](");
 				desc.push_str(track_info.uri.as_str());
