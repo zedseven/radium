@@ -414,7 +414,7 @@ pub async fn resume(ctx: PoiseContext<'_>) -> Result<(), Error> {
 }
 
 /// Seek to a specific time.
-#[command(slash_command)]
+#[command(slash_command, aliases("scrub", "jump"))]
 pub async fn seek(
 	ctx: PoiseContext<'_>,
 	#[rest]
