@@ -34,7 +34,10 @@ use poise::{
 };
 use songbird::{SerenityInit, Songbird};
 
-use crate::{commands::*, constants::PREFIX};
+use crate::{
+	commands::*,
+	constants::{PREFIX, PROGRAM_VERSION},
+};
 
 // Runtime Constants
 const TOKEN_VAR: &str = "DISCORD_TOKEN";
@@ -82,6 +85,8 @@ impl LavalinkEventHandler for LavalinkHandler {
 /// Entry point.
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+	println!("☢️ --- Radium v{} --- 📻", PROGRAM_VERSION);
+
 	// Load environment variables
 	dotenv().ok();
 
