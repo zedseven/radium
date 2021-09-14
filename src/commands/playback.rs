@@ -26,6 +26,7 @@ const DESCRIPTION_LENGTH_CUTOFF: usize = MAX_DESCRIPTION_LENGTH - 512;
 const MAX_LIST_ENTRY_LENGTH: usize = 60;
 const MAX_SINGLE_ENTRY_LENGTH: usize = 40;
 const UNKNOWN_TITLE: &str = "Unknown title";
+const LIVE_INDICATOR: &str = "🔴 **LIVE**";
 
 async fn join_internal<G, C>(
 	songbird: &Songbird,
@@ -295,7 +296,11 @@ pub async fn play(
 				"Added to queue: [{}]({}) [{}]",
 				chop_str(track_info.title.as_str(), MAX_SINGLE_ENTRY_LENGTH),
 				track_info.uri,
-				ctx.author().mention()
+				if track_info.is_stream {
+					LIVE_INDICATOR.to_owned()
+				} else {
+					display_time_span(track_info.length)
+				}
 			),
 		)
 		.await?;
@@ -608,7 +613,8 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 			}
 			None => {
 				ret.push_str(display_time_span(position).as_str());
-				ret.push_str(" 🔴 **LIVE**");
+				ret.push(' ');
+				ret.push_str(LIVE_INDICATOR)
 			}
 		}
 		ret
