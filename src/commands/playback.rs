@@ -1,5 +1,5 @@
 use anyhow::Context;
-use lavalink_rs::{model::Track, LavalinkClient};
+use lavalink_rs::LavalinkClient;
 use parse_duration::parse as parse_duration;
 use poise::{
 	command,
@@ -221,7 +221,7 @@ pub async fn play(
 			.iter()
 			.take(query_tracks)
 			.cloned()
-			.collect::<Vec<Track>>(),
+			.collect::<Vec<_>>(),
 	);
 
 	if queueable_tracks.is_empty() {

@@ -318,7 +318,7 @@ fn parse_roll_command(command: &str) -> Option<Vec<Evaluable>> {
 			tokens
 		})
 		.flatten()
-		.collect::<Vec<&str>>();
+		.collect::<Vec<_>>();
 
 	// Parse the tokens into RPN.
 	let mut output = Vec::new();
