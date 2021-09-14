@@ -1,5 +1,6 @@
 use anyhow::Context;
 use lavalink_rs::{model::Track, LavalinkClient};
+use parse_duration::parse as parse_duration;
 use poise::{
 	command,
 	serenity::model::{
@@ -360,6 +361,166 @@ pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	} else {
 		reply(ctx, "Nothing to skip.").await?;
 	}
+
+	Ok(())
+}
+
+/// Pause playback.
+#[command(slash_command)]
+pub async fn pause(ctx: PoiseContext<'_>) -> Result<(), Error> {
+	let guild = match ctx.guild() {
+		Some(guild) => guild,
+		None => {
+			reply(ctx, "You must use this command from within a server.").await?;
+			return Ok(());
+		}
+	};
+
+	let lava_client = &ctx.data().lavalink;
+
+	if let Err(e) = lava_client.pause(guild.id.0).await {
+		reply(ctx, "Failed to pause playback.").await?;
+		eprintln!("Failed to pause playback: {}", e);
+		return Ok(());
+	};
+
+	reply(ctx, "Paused playback.").await?;
+
+	Ok(())
+}
+
+/// Resume playback.
+#[command(slash_command)]
+pub async fn resume(ctx: PoiseContext<'_>) -> Result<(), Error> {
+	let guild = match ctx.guild() {
+		Some(guild) => guild,
+		None => {
+			reply(ctx, "You must use this command from within a server.").await?;
+			return Ok(());
+		}
+	};
+
+	let lava_client = &ctx.data().lavalink;
+
+	if let Err(e) = lava_client.resume(guild.id.0).await {
+		reply(ctx, "Failed to resume playback.").await?;
+		eprintln!("Failed to resume playback: {}", e);
+		return Ok(());
+	};
+
+	reply(ctx, "Resumed playback.").await?;
+
+	Ok(())
+}
+
+/// Seek to a specific time.
+#[command(slash_command)]
+pub async fn seek(
+	ctx: PoiseContext<'_>,
+	#[rest]
+	#[description = "What time to skip to."]
+	time: String,
+) -> Result<(), Error> {
+	// Constants
+	const COLON: char = ':';
+	const DECIMAL: char = '.';
+
+	// Parse the time - this is a little hacky and gross, but it allows for support
+	// of timecodes like `2:35`. This is more ergonomic for users than something
+	// like `2m35s`, and this way both formats are supported.
+	let mut invalid_value = false;
+	let mut time_prepared = String::with_capacity(time.len());
+	'prepare_time: for timecode in time.split_whitespace() {
+		// First iteration to find indices and make sure the timecode is valid
+		let mut colon_index_first = None;
+		let mut colon_index_second = None;
+		let mut decimal_index = None;
+		for (i, c) in timecode.chars().enumerate() {
+			if c == COLON {
+				if colon_index_first.is_none() {
+					colon_index_first = Some(i);
+				} else if colon_index_second.is_none() {
+					colon_index_second = Some(i);
+				} else {
+					// Maximum of two colons in a timecode
+					invalid_value = true;
+					break 'prepare_time;
+				}
+				if decimal_index.is_some() {
+					// Colons don't come after decimals
+					invalid_value = true;
+					break 'prepare_time;
+				}
+			} else if c == DECIMAL {
+				if decimal_index.is_none() {
+					decimal_index = Some(i);
+				} else {
+					// Only one decimal value
+					invalid_value = true;
+					break 'prepare_time;
+				}
+			}
+		}
+
+		// Second iteration using those indices to convert the timecode to a duration
+		// representation
+		let mut new_word = String::with_capacity(timecode.len());
+		for (i, c) in timecode.chars().enumerate() {
+			if colon_index_first.is_some() && i == colon_index_first.unwrap() {
+				if colon_index_second.is_some() {
+					new_word.push('h');
+				} else {
+					new_word.push('m');
+				}
+			} else if colon_index_second.is_some() && i == colon_index_second.unwrap() {
+				new_word.push('m');
+			} else if decimal_index.is_some() && i == decimal_index.unwrap() {
+				new_word.push('s');
+			} else {
+				new_word.push(c);
+			}
+		}
+		if decimal_index.is_some() {
+			new_word.push_str("ms");
+		} else if colon_index_first.is_some() {
+			new_word.push('s');
+		}
+
+		// Push the prepared timecode to the result
+		time_prepared.push_str(new_word.as_str());
+		time_prepared.push(' ');
+	}
+	if invalid_value {
+		reply(ctx, "Invalid value for time.").await?;
+		return Ok(());
+	}
+
+	let time_dur = match parse_duration(time_prepared.as_str()) {
+		Ok(duration) => duration,
+		Err(_) => {
+			reply(ctx, "Invalid value for time.").await?;
+			return Ok(());
+		}
+	};
+
+	// Seek to the parsed time
+	let guild = match ctx.guild() {
+		Some(guild) => guild,
+		None => {
+			reply(ctx, "You must use this command from within a server.").await?;
+			return Ok(());
+		}
+	};
+
+	let lava_client = &ctx.data().lavalink;
+
+	if let Err(e) = lava_client.seek(guild.id.0, time_dur).await {
+		reply(ctx, "Failed to seek to the specified time.").await?;
+		eprintln!("Failed to seek to the specified time: {}", e);
+		return Ok(());
+	};
+
+	reply(ctx, "Scrubbed to the specified time.").await?;
 
 	Ok(())
 }

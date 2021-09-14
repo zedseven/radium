@@ -114,16 +114,22 @@ async fn main() -> Result<(), Error> {
 		..Default::default()
 	};
 
+	// Utility
 	options.command(register(), |f| f);
 	options.command(about(), |f| f);
 	options.command(ping(), |f| f);
+	// Playback
 	options.command(join(), |f| f);
 	options.command(leave(), |f| f);
 	options.command(play(), |f| f);
 	options.command(skip(), |f| f);
+	options.command(pause(), |f| f);
+	options.command(resume(), |f| f);
+	options.command(seek(), |f| f);
 	options.command(clear(), |f| f);
 	options.command(now_playing(), |f| f);
 	options.command(queue(), |f| f);
+	// Chance
 	options.command(roll(), |f| f);
 
 	let lava_client = LavalinkClient::builder(app_id.0)
