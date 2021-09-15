@@ -30,7 +30,10 @@ use poise::{
 		},
 		Client,
 	},
+	EditTracker,
 	Framework,
+	FrameworkOptions,
+	PrefixFrameworkOptions,
 };
 use songbird::{SerenityInit, Songbird};
 
@@ -114,9 +117,9 @@ async fn main() -> Result<(), Error> {
 
 	let mut owners = HashSet::new();
 	owners.insert(owner_id);
-	let mut options = poise::FrameworkOptions {
-		prefix_options: poise::PrefixFrameworkOptions {
-			edit_tracker: Some(poise::EditTracker::for_timespan(Duration::from_secs(3600))),
+	let mut options = FrameworkOptions {
+		prefix_options: PrefixFrameworkOptions {
+			edit_tracker: Some(EditTracker::for_timespan(Duration::from_secs(3600))),
 			..Default::default()
 		},
 		on_error: |e, ctx| Box::pin(on_error(e, ctx)),
