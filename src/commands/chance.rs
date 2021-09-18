@@ -4,7 +4,7 @@ use poise::{command, serenity::model::misc::Mentionable};
 use rand::{distributions::Uniform, thread_rng, Rng};
 
 use crate::{
-	util::{is_slash_context, reply, reply_embed, reply_plain},
+	util::{escape_str, is_slash_context, reply, reply_embed, reply_plain},
 	Error,
 	PoiseContext,
 };
@@ -77,12 +77,11 @@ pub async fn roll(
 				}
 
 				// Annotation parsing
-				let annotation;
-				if let Some(index) = annotation_index {
-					annotation = command[(index + 1)..].trim();
+				let annotation = escape_str(if let Some(index) = annotation_index {
+					command[(index + 1)..].trim()
 				} else {
-					annotation = "";
-				}
+					""
+				});
 
 				// Display
 				let dice_rolls_len = dice_rolls.len();
@@ -96,6 +95,8 @@ pub async fn roll(
 					.trim_end_matches('.')
 					.to_owned();
 
+				let command_slice_escaped = escape_str(command_slice);
+
 				if display_big_result {
 					if rolls_string.len() > MAX_FIELD_VALUE {
 						rolls_string = String::from("*…clipped because there were too many values*")
@@ -107,12 +108,9 @@ pub async fn roll(
 						if !annotation.is_empty() {
 							e.field("Reason:", format!("`{}`", annotation), true);
 						}
-						e.field("Command:", format!("`{}`", command_slice), false);
-						e.field("Rolls:", rolls_string, false).field(
-							"Result:",
-							format!("`{}`", result_display),
-							false,
-						)
+						e.field("Command:", format!("`{}`", command_slice_escaped), false)
+							.field("Rolls:", rolls_string, false)
+							.field("Result:", format!("`{}`", result_display), false)
 					})
 					.await?;
 				} else {
@@ -122,12 +120,12 @@ pub async fn roll(
 					}
 					if !annotation.is_empty() {
 						display.push_str(" `");
-						display.push_str(annotation);
+						display.push_str(annotation.as_str());
 						display.push('`');
 					}
 					if slash_command {
 						display.push_str(" `");
-						display.push_str(command_slice);
+						display.push_str(command_slice_escaped.as_str());
 						display.push('`');
 					}
 					display.push_str(": ");
