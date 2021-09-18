@@ -1,7 +1,10 @@
 [package]
 name = "radium"
 version = "1.0.0"
-edition = "2018"
+authors = ["Zacchary Dempsey-Plante <zacc@ztdp.ca>"]
+edition = "2021"
+license = "GPL-3.0-or-later"
+description = "A simple music & dice bot made for personal use."
 
 [dependencies]
 anyhow = "1.0"
