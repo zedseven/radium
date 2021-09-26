@@ -1,4 +1,5 @@
 # Radium (Radio) Bot
+<img src="logo.png" alt="Logo" title="Logo" align="right" width="30%">
 A simple music & dice bot made for personal use.
 
 I made this for use by my friends and I on [Discord](https://discord.com/).
