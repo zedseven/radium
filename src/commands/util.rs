@@ -31,7 +31,7 @@ pub async fn register(ctx: PrefixContext<'_>, #[flag] local: bool) -> Result<(),
 /// detailed description of what the command does, and how to use it.
 ///
 /// Of course, if you're seeing this, you already know you can do that.
-#[command(slash_command, track_edits)]
+#[command(slash_command, track_edits, aliases("h"))]
 pub async fn help(
 	ctx: PoiseContext<'_>,
 	#[description = "A specific command to show help about."] command: Option<String>,

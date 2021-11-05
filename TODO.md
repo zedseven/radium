@@ -28,3 +28,5 @@
   skipping and re-adding it - either way, much more complicated and not intuitive 
   - Could insert right after current track, which would allow the user to decide what to do with whatever is currently
   playing
+- Support timestamped YouTube videos
+- SponsorBlock integration
