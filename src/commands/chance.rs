@@ -1,3 +1,4 @@
+// Uses
 use std::{cmp::Reverse, collections::VecDeque, num::ParseIntError, str::FromStr};
 
 use poise::{command, serenity::model::misc::Mentionable};
@@ -9,6 +10,7 @@ use crate::{
 	PoiseContext,
 };
 
+// Constants
 const ANNOTATION_CHAR: char = '!';
 const OPERATOR_SYMBOLS: [char; 10] = ['^', '*', '×', 'x', '/', '÷', '+', '-', '(', ')'];
 const MAX_FIELD_VALUE: usize = 1024;
@@ -41,118 +43,115 @@ pub async fn roll(
 		None => command.trim(),
 	};
 
-	match parse_roll_command(command_slice) {
-		Some(rpn) => {
-			if let Some((result, dice_rolls)) = evaluate_roll_command(rpn) {
-				// Display preparation
-				let mut rolls_string = String::new();
-				let rolls_count = dice_rolls.len();
-				if rolls_count > 0 {
-					rolls_string.push('`');
-					if rolls_count > 1 {
+	if let Some(rpn) = parse_roll_command(command_slice) {
+		if let Some((result, dice_rolls)) = evaluate_roll_command(rpn) {
+			// Display preparation
+			let mut rolls_string = String::new();
+			let rolls_count = dice_rolls.len();
+			if rolls_count > 0 {
+				rolls_string.push('`');
+				if rolls_count > 1 {
+					rolls_string.push('[');
+				}
+				for (i, dice_roll) in dice_rolls.iter().enumerate() {
+					if i > 0 {
+						rolls_string.push(' ');
+					}
+					let roll_dice_count = dice_roll.len();
+					if roll_dice_count > 1 {
 						rolls_string.push('[');
 					}
-					for (i, dice_roll) in dice_rolls.iter().enumerate() {
-						if i > 0 {
+					for (j, value) in dice_roll.iter().enumerate() {
+						if j > 0 {
 							rolls_string.push(' ');
 						}
-						let roll_dice_count = dice_roll.len();
-						if roll_dice_count > 1 {
-							rolls_string.push('[');
-						}
-						for (j, value) in dice_roll.iter().enumerate() {
-							if j > 0 {
-								rolls_string.push(' ');
-							}
-							rolls_string.push_str(value.to_string().as_str());
-						}
-						if roll_dice_count > 1 {
-							rolls_string.push(']');
-						}
+						rolls_string.push_str(value.to_string().as_str());
 					}
-					if rolls_count > 1 {
+					if roll_dice_count > 1 {
 						rolls_string.push(']');
 					}
-					rolls_string.push('`');
 				}
+				if rolls_count > 1 {
+					rolls_string.push(']');
+				}
+				rolls_string.push('`');
+			}
 
-				// Annotation parsing
-				let annotation = escape_str(if let Some(index) = annotation_index {
-					command[(index + 1)..].trim()
-				} else {
-					""
-				});
+			// Annotation parsing
+			let annotation = escape_str(if let Some(index) = annotation_index {
+				command[(index + 1)..].trim()
+			} else {
+				""
+			});
 
-				// Display
-				let dice_rolls_len = dice_rolls.len();
-				let display_big_result =
-					dice_rolls_len > 1 || (dice_rolls_len == 1 && dice_rolls[0].len() >= 5);
+			// Display
+			let dice_rolls_len = dice_rolls.len();
+			let display_big_result =
+				dice_rolls_len > 1 || (dice_rolls_len == 1 && dice_rolls[0].len() >= 5);
 
-				// Display the result with maximum 2 decimal places of precision, but strip
-				// off trailing '0's and '.'s so that normal rolls don't have decimals
-				let result_display = format!("{:.2}", result)
-					.trim_end_matches('0')
-					.trim_end_matches('.')
-					.to_owned();
+			// Display the result with maximum 2 decimal places of precision, but strip
+			// off trailing '0's and '.'s so that normal rolls don't have decimals
+			let result_display = format!("{:.2}", result)
+				.trim_end_matches('0')
+				.trim_end_matches('.')
+				.to_owned();
 
-				let command_slice_escaped = escape_str(command_slice);
+			let command_slice_escaped = escape_str(command_slice);
 
-				if display_big_result {
-					if rolls_string.len() > MAX_FIELD_VALUE {
-						rolls_string = String::from("*…clipped because there were too many values*")
-					}
-					reply_embed(ctx, |e| {
-						if !slash_command {
-							e.field("For:", ctx.author().mention(), true);
-						}
-						if !annotation.is_empty() {
-							e.field("Reason:", format!("`{}`", annotation), true);
-						}
-						e.field("Command:", format!("`{}`", command_slice_escaped), false)
-							.field("Rolls:", rolls_string, false)
-							.field("Result:", format!("`{}`", result_display), false)
-					})
-					.await?;
-				} else {
-					let mut display = String::new();
+			if display_big_result {
+				if rolls_string.len() > MAX_FIELD_VALUE {
+					rolls_string = "*…clipped because there were too many values*".to_owned();
+				}
+				reply_embed(ctx, |e| {
 					if !slash_command {
-						display.push_str(ctx.author().mention().to_string().as_str());
+						e.field("For:", ctx.author().mention(), true);
 					}
 					if !annotation.is_empty() {
-						display.push_str(" `");
-						display.push_str(annotation.as_str());
-						display.push('`');
+						e.field("Reason:", format!("`{}`", annotation), true);
 					}
-					if slash_command {
-						display.push_str(" `");
-						display.push_str(command_slice_escaped.as_str());
-						display.push('`');
-					}
-					display.push_str(": ");
-					display.push_str(rolls_string.as_str());
-					if !(dice_rolls_len == 1
-						&& dice_rolls[0].len() == 1
-						&& (dice_rolls[0][0] as f64).eq(&result))
-					{
-						if !rolls_string.is_empty() {
-							display.push(' ');
-						}
-						display.push_str("Result: `");
-						display.push_str(result_display.as_str());
-						display.push('`');
-					}
-
-					reply_plain(ctx, display.trim()).await?;
-				}
+					e.field("Command:", format!("`{}`", command_slice_escaped), false)
+						.field("Rolls:", rolls_string, false)
+						.field("Result:", format!("`{}`", result_display), false)
+				})
+				.await?;
 			} else {
-				reply(ctx, "Invalid command.").await?;
-				return Ok(());
+				let mut display = String::new();
+				if !slash_command {
+					display.push_str(ctx.author().mention().to_string().as_str());
+				}
+				if !annotation.is_empty() {
+					display.push_str(" `");
+					display.push_str(annotation.as_str());
+					display.push('`');
+				}
+				if slash_command {
+					display.push_str(" `");
+					display.push_str(command_slice_escaped.as_str());
+					display.push('`');
+				}
+				display.push_str(": ");
+				display.push_str(rolls_string.as_str());
+				if !(dice_rolls_len == 1
+					&& dice_rolls[0].len() == 1
+					&& f64::from(dice_rolls[0][0]).eq(&result))
+				{
+					if !rolls_string.is_empty() {
+						display.push(' ');
+					}
+					display.push_str("Result: `");
+					display.push_str(result_display.as_str());
+					display.push('`');
+				}
+
+				reply_plain(ctx, display.trim()).await?;
 			}
-		}
-		None => {
+		} else {
 			reply(ctx, "Invalid command.").await?;
 			return Ok(());
 		}
+	} else {
+		reply(ctx, "Invalid command.").await?;
+		return Ok(());
 	}
 
 	Ok(())
@@ -221,10 +220,10 @@ impl FromStr for Dice {
 			None => return Err(ParseDiceError::Format),
 		};
 
-		let dice_count = if d_index != 0 {
-			s[0..d_index].parse::<u32>().map_err(ParseDiceError::Int)?
-		} else {
+		let dice_count = if d_index == 0 {
 			1
+		} else {
+			s[0..d_index].parse::<u32>().map_err(ParseDiceError::Int)?
 		};
 
 		let remaining = &s[(d_index + 1)..];
@@ -234,9 +233,8 @@ impl FromStr for Dice {
 		let mod_index = if b_index.is_some() {
 			if w_index.is_some() {
 				return Err(ParseDiceError::Format);
-			} else {
-				b_index
 			}
+			b_index
 		} else {
 			w_index
 		};
@@ -309,7 +307,7 @@ fn parse_roll_command(command: &str) -> Option<Vec<Evaluable>> {
 	// individual tokens.
 	let tokens = command
 		.split_whitespace()
-		.map(|s| {
+		.flat_map(|s| {
 			let mut tokens = Vec::new();
 			let mut start_index = 0;
 			for (i, c) in s.char_indices() {
@@ -326,7 +324,6 @@ fn parse_roll_command(command: &str) -> Option<Vec<Evaluable>> {
 			}
 			tokens
 		})
-		.flatten()
 		.collect::<Vec<_>>();
 
 	// Parse the tokens into RPN.
@@ -402,7 +399,7 @@ fn evaluate_roll_command(rpn: Vec<Evaluable>) -> Option<(f64, Vec<Vec<u32>>)> {
 			Evaluable::Dice(dice) => {
 				let (rolls, value) = dice.eval();
 				dice_rolls.push(rolls);
-				stack.push_front(value as f64);
+				stack.push_front(f64::from(value));
 			}
 			Evaluable::Num(value) => {
 				stack.push_front(value);

@@ -1,3 +1,4 @@
+// Uses
 use anyhow::{Context, Error};
 use lazy_static::lazy_static;
 use poise::{send_reply, serenity::builder::CreateEmbed};
@@ -5,6 +6,7 @@ use regex::Regex;
 
 use crate::{constants::MAIN_COLOUR, PoiseContext};
 
+// Functions
 pub async fn reply<S: ToString>(ctx: PoiseContext<'_>, msg: S) -> Result<(), Error> {
 	send_reply(ctx, |m| m.embed(|e| e.colour(MAIN_COLOUR).description(msg)))
 		.await

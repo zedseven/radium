@@ -1,3 +1,4 @@
+// Uses
 use anyhow::Context;
 use lavalink_rs::LavalinkClient;
 use parse_duration::parse as parse_duration;
@@ -21,6 +22,7 @@ use crate::{
 	PoiseContext,
 };
 
+// Constants
 const MAX_DESCRIPTION_LENGTH: usize = 2048;
 const DESCRIPTION_LENGTH_CUTOFF: usize = MAX_DESCRIPTION_LENGTH - 512;
 const MAX_LIST_ENTRY_LENGTH: usize = 60;
@@ -28,6 +30,7 @@ const MAX_SINGLE_ENTRY_LENGTH: usize = 40;
 const UNKNOWN_TITLE: &str = "Unknown title";
 const LIVE_INDICATOR: &str = "🔴 **LIVE**";
 
+// Functions
 async fn join_internal<G, C>(
 	songbird: &Songbird,
 	lavalink: &LavalinkClient,
@@ -49,30 +52,28 @@ where
 	}
 }
 
-fn authour_channel_id(guild: &Guild, authour_id: &UserId) -> Option<ChannelId> {
+fn authour_channel_id(guild: &Guild, authour_id: UserId) -> Option<ChannelId> {
 	guild
 		.voice_states
-		.get(authour_id)
+		.get(&authour_id)
 		.and_then(|voice_state| voice_state.channel_id)
 }
 
 /// Have Radium join the voice channel you're in.
 #[command(slash_command, aliases("j"))]
 pub async fn join(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild = match ctx.guild() {
-		Some(guild) => guild,
-		None => {
-			reply(ctx, "You must use this command from within a server.").await?;
-			return Ok(());
-		}
+	let guild = if let Some(guild) = ctx.guild() {
+		guild
+	} else {
+		reply(ctx, "You must use this command from within a server.").await?;
+		return Ok(());
 	};
 
-	let channel_id = match authour_channel_id(&guild, &ctx.author().id) {
-		Some(channel) => channel,
-		None => {
-			reply(ctx, "You must use this command while in a voice channel.").await?;
-			return Ok(());
-		}
+	let channel_id = if let Some(channel) = authour_channel_id(&guild, ctx.author().id) {
+		channel
+	} else {
+		reply(ctx, "You must use this command while in a voice channel.").await?;
+		return Ok(());
 	};
 
 	match join_internal(
@@ -89,7 +90,7 @@ pub async fn join(ctx: PoiseContext<'_>) -> Result<(), Error> {
 				ctx,
 				format!("Error joining {}: {}", channel_id.mention(), e),
 			)
-			.await?
+			.await?;
 		}
 	}
 
@@ -99,12 +100,11 @@ pub async fn join(ctx: PoiseContext<'_>) -> Result<(), Error> {
 /// Have Radium leave the voice channel it's in, if any.
 #[command(slash_command, aliases("l"))]
 pub async fn leave(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild = match ctx.guild() {
-		Some(guild) => guild,
-		None => {
-			reply(ctx, "You must use this command from within a server.").await?;
-			return Ok(());
-		}
+	let guild = if let Some(guild) = ctx.guild() {
+		guild
+	} else {
+		reply(ctx, "You must use this command from within a server.").await?;
+		return Ok(());
 	};
 
 	let manager = &ctx.data().songbird;
@@ -141,28 +141,26 @@ pub async fn play(
 	#[description = "What to play."]
 	query: String,
 ) -> Result<(), Error> {
-	let guild = match ctx.guild() {
-		Some(guild) => guild,
-		None => {
-			reply(ctx, "You must use this command from within a server.").await?;
-			return Ok(());
-		}
+	let guild = if let Some(guild) = ctx.guild() {
+		guild
+	} else {
+		reply(ctx, "You must use this command from within a server.").await?;
+		return Ok(());
 	};
 
 	let manager = &ctx.data().songbird;
 	let lava_client = &ctx.data().lavalink;
 
 	if manager.get(guild.id).is_none() {
-		let channel_id = match authour_channel_id(&guild, &ctx.author().id) {
-			Some(channel) => channel,
-			None => {
-				reply(
-					ctx,
-					"You must use this command while either you or Radium is in a voice channel.",
-				)
-				.await?;
-				return Ok(());
-			}
+		let channel_id = if let Some(channel) = authour_channel_id(&guild, ctx.author().id) {
+			channel
+		} else {
+			reply(
+				ctx,
+				"You must use this command while either you or Radium is in a voice channel.",
+			)
+			.await?;
+			return Ok(());
 		};
 
 		if let Err(e) = join_internal(manager, lava_client, guild.id, channel_id).await {
@@ -204,7 +202,7 @@ pub async fn play(
 						None => None,
 					}
 				}
-				queueable_tracks.extend_from_slice(&query_result.tracks)
+				queueable_tracks.extend_from_slice(&query_result.tracks);
 			}
 		}
 		PoiseContext::Slash(_) => {}
@@ -336,12 +334,11 @@ pub async fn play(
 /// Skip the current track.
 #[command(slash_command, aliases("next", "stop", "n", "s"))]
 pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild = match ctx.guild() {
-		Some(guild) => guild,
-		None => {
-			reply(ctx, "You must use this command from within a server.").await?;
-			return Ok(());
-		}
+	let guild = if let Some(guild) = ctx.guild() {
+		guild
+	} else {
+		reply(ctx, "You must use this command from within a server.").await?;
+		return Ok(());
 	};
 
 	let lava_client = &ctx.data().lavalink;
@@ -383,12 +380,11 @@ pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 /// The opposite of `resume`.
 #[command(slash_command)]
 pub async fn pause(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild = match ctx.guild() {
-		Some(guild) => guild,
-		None => {
-			reply(ctx, "You must use this command from within a server.").await?;
-			return Ok(());
-		}
+	let guild = if let Some(guild) = ctx.guild() {
+		guild
+	} else {
+		reply(ctx, "You must use this command from within a server.").await?;
+		return Ok(());
 	};
 
 	let lava_client = &ctx.data().lavalink;
@@ -409,12 +405,11 @@ pub async fn pause(ctx: PoiseContext<'_>) -> Result<(), Error> {
 /// The opposite of `pause`.
 #[command(slash_command)]
 pub async fn resume(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild = match ctx.guild() {
-		Some(guild) => guild,
-		None => {
-			reply(ctx, "You must use this command from within a server.").await?;
-			return Ok(());
-		}
+	let guild = if let Some(guild) = ctx.guild() {
+		guild
+	} else {
+		reply(ctx, "You must use this command from within a server.").await?;
+		return Ok(());
 	};
 
 	let lava_client = &ctx.data().lavalink;
@@ -517,21 +512,19 @@ pub async fn seek(
 		return Ok(());
 	}
 
-	let time_dur = match parse_duration(time_prepared.as_str()) {
-		Ok(duration) => duration,
-		Err(_) => {
-			reply(ctx, "Invalid value for time.").await?;
-			return Ok(());
-		}
+	let time_dur = if let Ok(duration) = parse_duration(time_prepared.as_str()) {
+		duration
+	} else {
+		reply(ctx, "Invalid value for time.").await?;
+		return Ok(());
 	};
 
 	// Seek to the parsed time
-	let guild = match ctx.guild() {
-		Some(guild) => guild,
-		None => {
-			reply(ctx, "You must use this command from within a server.").await?;
-			return Ok(());
-		}
+	let guild = if let Some(guild) = ctx.guild() {
+		guild
+	} else {
+		reply(ctx, "You must use this command from within a server.").await?;
+		return Ok(());
 	};
 
 	let lava_client = &ctx.data().lavalink;
@@ -554,12 +547,11 @@ pub async fn seek(
 /// offline.
 #[command(slash_command, aliases("c"))]
 pub async fn clear(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild = match ctx.guild() {
-		Some(guild) => guild,
-		None => {
-			reply(ctx, "You must use this command from within a server.").await?;
-			return Ok(());
-		}
+	let guild = if let Some(guild) = ctx.guild() {
+		guild
+	} else {
+		reply(ctx, "You must use this command from within a server.").await?;
+		return Ok(());
 	};
 
 	let lava_client = &ctx.data().lavalink;
@@ -597,35 +589,31 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		const PROGRESS_BAR_SIZE: u64 = 10;
 
 		let mut ret = String::new();
-		match length {
-			Some(length_actual) => {
-				ret.push_str(display_time_span(position).as_str());
-				ret.push(' ');
-				let fill_point = position * PROGRESS_BAR_SIZE / length_actual;
-				for _ in 0..fill_point {
-					ret.push(FULL_BLOCK);
-				}
-				for _ in fill_point..PROGRESS_BAR_SIZE {
-					ret.push(EMPTY_BLOCK);
-				}
-				ret.push(' ');
-				ret.push_str(display_time_span(length_actual).as_str());
+		if let Some(length_actual) = length {
+			ret.push_str(display_time_span(position).as_str());
+			ret.push(' ');
+			let fill_point = position * PROGRESS_BAR_SIZE / length_actual;
+			for _ in 0..fill_point {
+				ret.push(FULL_BLOCK);
 			}
-			None => {
-				ret.push_str(display_time_span(position).as_str());
-				ret.push(' ');
-				ret.push_str(LIVE_INDICATOR)
+			for _ in fill_point..PROGRESS_BAR_SIZE {
+				ret.push(EMPTY_BLOCK);
 			}
+			ret.push(' ');
+			ret.push_str(display_time_span(length_actual).as_str());
+		} else {
+			ret.push_str(display_time_span(position).as_str());
+			ret.push(' ');
+			ret.push_str(LIVE_INDICATOR);
 		}
 		ret
 	}
 
-	let guild = match ctx.guild() {
-		Some(guild) => guild,
-		None => {
-			reply(ctx, "You must use this command from within a server.").await?;
-			return Ok(());
-		}
+	let guild = if let Some(guild) = ctx.guild() {
+		guild
+	} else {
+		reply(ctx, "You must use this command from within a server.").await?;
+		return Ok(());
 	};
 
 	let lava_client = &ctx.data().lavalink;
@@ -683,12 +671,11 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 /// Show the playback queue.
 #[command(slash_command, aliases("q"))]
 pub async fn queue(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild = match ctx.guild() {
-		Some(guild) => guild,
-		None => {
-			reply(ctx, "You must use this command from within a server.").await?;
-			return Ok(());
-		}
+	let guild = if let Some(guild) = ctx.guild() {
+		guild
+	} else {
+		reply(ctx, "You must use this command from within a server.").await?;
+		return Ok(());
 	};
 
 	let lava_client = &ctx.data().lavalink;
@@ -726,10 +713,10 @@ pub async fn queue(ctx: PoiseContext<'_>) -> Result<(), Error> {
 				}
 			}
 			reply_embed(ctx, |e| {
-				e.title(if queue_len != 1 {
-					format!("Queue ({} total tracks):", queue_len)
-				} else {
+				e.title(if queue_len == 1 {
 					format!("Queue ({} total track):", queue_len)
+				} else {
+					format!("Queue ({} total tracks):", queue_len)
 				})
 				.description(desc)
 			})

@@ -1,10 +1,38 @@
+// Features
 #![feature(int_log)]
-#![allow(dead_code)]
+// Linting Rules
+#![warn(
+	clippy::complexity,
+	clippy::correctness,
+	clippy::perf,
+	clippy::style,
+	clippy::suspicious,
+	clippy::pedantic,
+	clippy::filetype_is_file,
+	clippy::str_to_string
+)]
+#![allow(
+	clippy::cast_possible_truncation,
+	clippy::cast_possible_wrap,
+	clippy::cast_precision_loss,
+	clippy::cast_sign_loss,
+	clippy::doc_markdown,
+	clippy::module_name_repetitions,
+	clippy::no_effect_underscore_binding,
+	clippy::similar_names,
+	clippy::too_many_lines,
+	clippy::unnecessary_wraps,
+	clippy::wildcard_imports,
+	dead_code,
+	unused_macros
+)]
 
+// Modules
 mod commands;
 mod constants;
 mod util;
 
+// Uses
 use std::{
 	collections::{HashMap, HashSet},
 	env::var,
@@ -88,7 +116,10 @@ impl LavalinkEventHandler for LavalinkHandler {
 /// Entry point.
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-	println!("☢️ --- Radium v{} --- 📻", PROGRAM_VERSION);
+	println!(
+		"\u{2622}\u{fe0f} --- Radium v{} --- \u{1f4fb}",
+		PROGRAM_VERSION
+	);
 
 	// Load environment variables
 	dotenv().ok();
@@ -120,11 +151,11 @@ async fn main() -> Result<(), Error> {
 	let mut options = FrameworkOptions {
 		prefix_options: PrefixFrameworkOptions {
 			edit_tracker: Some(EditTracker::for_timespan(Duration::from_secs(3600))),
-			..Default::default()
+			..PrefixFrameworkOptions::default()
 		},
 		on_error: |e, ctx| Box::pin(on_error(e, ctx)),
 		owners,
-		..Default::default()
+		..FrameworkOptions::default()
 	};
 
 	// Command Initialization
