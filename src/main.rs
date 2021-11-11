@@ -1,4 +1,5 @@
 // Features
+#![feature(label_break_value)]
 #![feature(int_log)]
 // Linting Rules
 #![warn(
@@ -30,6 +31,8 @@
 // Modules
 mod commands;
 mod constants;
+mod event_handlers;
+mod segments;
 mod util;
 
 // Uses
@@ -43,19 +46,14 @@ use std::{
 
 use anyhow::Context;
 use dotenv::dotenv;
-use lavalink_rs::{gateway::LavalinkEventHandler, LavalinkClient};
+use lavalink_rs::LavalinkClient;
 use poise::{
 	defaults::on_error,
 	serenity::{
 		self,
-		async_trait,
-		client::{parse_token, RawEventHandler},
+		client::parse_token,
 		http::Http,
-		model::{
-			event::Event,
-			gateway::Ready,
-			id::{ApplicationId, GuildId},
-		},
+		model::id::{ApplicationId, GuildId},
 		Client,
 	},
 	EditTracker,
@@ -64,53 +62,35 @@ use poise::{
 	PrefixFrameworkOptions,
 };
 use songbird::{SerenityInit, Songbird};
+use sponsor_block::Client as SponsorBlockClient;
 
 use crate::{
 	commands::*,
 	constants::{PREFIX, PROGRAM_VERSION},
+	event_handlers::{LavalinkHandler, SerenityHandler},
+	segments::SegmentData,
 };
 
 // Runtime Constants
-const TOKEN_VAR: &str = "DISCORD_TOKEN";
+const DISCORD_TOKEN_VAR: &str = "DISCORD_TOKEN";
 const LAVALINK_HOST_VAR: &str = "LAVALINK_HOST";
 const LAVALINK_PASSWORD_VAR: &str = "LAVALINK_PASSWORD";
 const LAVALINK_HOST_DEFAULT: &str = "127.0.0.1";
+const SPONSOR_BLOCK_USER_ID_VAR: &str = "SPONSOR_BLOCK_USER_ID";
 
 // Definitions
+pub type DataArc = Arc<Data>;
 pub type Error = Box<dyn error::Error + Send + Sync>;
-pub type PoiseContext<'a> = poise::Context<'a, Data, Error>;
-pub type PrefixContext<'a> = poise::PrefixContext<'a, Data, Error>;
+pub type PoiseContext<'a> = poise::Context<'a, DataArc, Error>;
+pub type PoisePrefixContext<'a> = poise::PrefixContext<'a, DataArc, Error>;
 pub type SerenityContext = serenity::client::Context;
 
 pub struct Data {
 	songbird: Arc<Songbird>,
 	lavalink: LavalinkClient,
+	sponsor_block: SponsorBlockClient,
 	queued_count: Mutex<HashMap<GuildId, usize>>,
-}
-
-struct Handler;
-struct LavalinkHandler;
-
-/// Event Handlers
-#[async_trait]
-#[allow(clippy::single_match)]
-impl RawEventHandler for Handler {
-	async fn raw_event(&self, ctx: SerenityContext, event: Event) {
-		match event {
-			Event::Ready(ready) => on_ready(ctx, ready.ready).await,
-			_ => (),
-		}
-	}
-}
-
-#[async_trait]
-impl LavalinkEventHandler for LavalinkHandler {
-	/*async fn track_start(&self, _client: LavalinkClient, event: TrackStart) {
-		println!("Track started!\nGuild: {}", event.guild_id);
-	}
-	async fn track_finish(&self, _client: LavalinkClient, event: TrackFinish) {
-		println!("Track finished!\nGuild: {}", event.guild_id);
-	}*/
+	segment_data: Mutex<SegmentData>,
 }
 
 /// Entry point.
@@ -125,15 +105,22 @@ async fn main() -> Result<(), Error> {
 	dotenv().ok();
 
 	// Prepare basic bot information
-	let token = var(TOKEN_VAR).with_context(|| {
+	let token = var(DISCORD_TOKEN_VAR).with_context(|| {
 		format!(
 			"Expected the discord token in the environment variable {}",
-			TOKEN_VAR
+			DISCORD_TOKEN_VAR
 		)
 	})?;
 	let app_id = parse_token(&token)
 		.with_context(|| "Token is invalid".to_owned())?
 		.bot_user_id;
+
+	let sponsor_block_user_id = var(SPONSOR_BLOCK_USER_ID_VAR).with_context(|| {
+		format!(
+			"Expected the SponsorBlock user ID in the environment variable {}",
+			SPONSOR_BLOCK_USER_ID_VAR
+		)
+	})?;
 
 	let http = Http::new_with_token(&token);
 	let owner_id = http
@@ -179,6 +166,11 @@ async fn main() -> Result<(), Error> {
 	options.command(roll(), |f| f);
 
 	// Start up the bot
+
+	// This mess is so that we can give the Lavalink event handler access to the
+	// global Data which we don't actually have initialized yet
+	let pre_init_data_arc = Arc::new(Mutex::new(None));
+
 	let lava_client = LavalinkClient::builder(app_id.0)
 		.set_host(var(LAVALINK_HOST_VAR).unwrap_or_else(|_| LAVALINK_HOST_DEFAULT.to_owned()))
 		.set_password(var(LAVALINK_PASSWORD_VAR).with_context(|| {
@@ -187,53 +179,44 @@ async fn main() -> Result<(), Error> {
 				LAVALINK_PASSWORD_VAR
 			)
 		})?)
-		.build(LavalinkHandler)
+		.build(LavalinkHandler {
+			data: pre_init_data_arc.clone(),
+		})
 		.await
 		.with_context(|| "Failed to start the Lavalink client")?;
+	let sponsor_block_client = SponsorBlockClient::new(sponsor_block_user_id);
 
 	let songbird = Songbird::serenity();
 	let songbird_clone = songbird.clone(); // Required because the closure that uses it moves the value
+
+	let data = Arc::new(Data {
+		songbird: songbird_clone,
+		lavalink: lava_client,
+		sponsor_block: sponsor_block_client,
+		queued_count: Mutex::new(HashMap::new()),
+		segment_data: Mutex::new(SegmentData::new()),
+	});
+	// Set the Data Arc that was given to the LavalinkHandler
+	{
+		let mut data_guard = pre_init_data_arc.lock().unwrap();
+		*data_guard = Some(data.clone());
+	}
+
 	let framework = Framework::new(
 		PREFIX.to_owned(),
 		ApplicationId(app_id.0),
-		move |_ctx, _ready, _framework| {
-			Box::pin(async move {
-				Ok(Data {
-					songbird: songbird_clone,
-					lavalink: lava_client,
-					queued_count: Mutex::new(HashMap::new()),
-				})
-			})
-		},
+		move |_ctx, _ready, _framework| Box::pin(async move { Ok(data) }),
 		options,
 	);
 
 	framework
 		.start(
 			Client::builder(&token)
-				.raw_event_handler(Handler)
+				.raw_event_handler(SerenityHandler)
 				.register_songbird_with(songbird),
 		)
 		.await
 		.with_context(|| "Failed to start up".to_owned())?;
 
 	Ok(())
-}
-
-/// Startup Function.
-async fn on_ready(ctx: SerenityContext, ready: Ready) {
-	println!("{} is connected!", ready.user.name);
-	if ready.guilds.is_empty() {
-		println!("No connected guilds.");
-		return;
-	}
-	println!("Connected guilds:");
-	for guild in &ready.guilds {
-		let guild_data = guild
-			.id()
-			.to_partial_guild(&ctx.http)
-			.await
-			.unwrap_or_else(|_| panic!("Unable to get guild with id {}", guild.id()));
-		println!("{} - {}", guild.id().0, guild_data.name);
-	}
 }

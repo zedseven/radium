@@ -4,7 +4,17 @@ use lazy_static::lazy_static;
 use poise::{send_reply, serenity::builder::CreateEmbed};
 use regex::Regex;
 
-use crate::{constants::MAIN_COLOUR, PoiseContext};
+use crate::{
+	constants::{
+		MAIN_COLOUR,
+		MILLIS_PER_HOUR,
+		MILLIS_PER_MINUTE,
+		MILLIS_PER_SECOND,
+		MINUTES_PER_HOUR,
+		SECONDS_PER_MINUTE,
+	},
+	PoiseContext,
+};
 
 // Functions
 pub async fn reply<S: ToString>(ctx: PoiseContext<'_>, msg: S) -> Result<(), Error> {
@@ -67,12 +77,6 @@ pub fn is_slash_context(ctx: &PoiseContext<'_>) -> bool {
 }
 
 pub fn display_time_span(millis: u64) -> String {
-	const MILLIS_PER_SECOND: u64 = 1000;
-	const SECONDS_PER_MINUTE: u64 = 60;
-	const MINUTES_PER_HOUR: u64 = 60;
-	const MILLIS_PER_MINUTE: u64 = MILLIS_PER_SECOND * SECONDS_PER_MINUTE;
-	const MILLIS_PER_HOUR: u64 = MILLIS_PER_MINUTE * MINUTES_PER_HOUR;
-
 	if millis >= MILLIS_PER_HOUR {
 		format!(
 			"{:02}:{:02}:{:02}",

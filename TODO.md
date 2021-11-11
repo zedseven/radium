@@ -30,3 +30,6 @@
   playing
 - Support timestamped YouTube videos
 - SponsorBlock integration
+  - Filter out segments <5s long or something, since lavalink seeking takes a second
+  - Probably shouldn't bother with previews/recaps and highlights
+  - Maybe don't show a message when skipping, but show a readout of segments to skip on queueing a single track 

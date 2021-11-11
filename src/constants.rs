@@ -3,6 +3,7 @@
 
 // Uses
 use poise::serenity::{model::id::UserId, utils::Colour};
+use sponsor_block::AcceptedCategories;
 
 // Constants
 pub const PROGRAM_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -11,3 +12,12 @@ pub const SOURCE_LINK: &str = "https://github.com/zedseven/radium";
 pub const CREATED_DATE: &str = "2021-08-30";
 pub const PREFIX: &str = "-";
 pub const MAIN_COLOUR: Colour = Colour(0xbf5c4e);
+pub const ACCEPTED_CATEGORIES: AcceptedCategories = AcceptedCategories::all(); // We filter on use
+
+// Utility Constants
+pub const MILLIS_PER_SECOND: u64 = 1000;
+pub const MILLIS_PER_SECOND_F32: f32 = 1000.0;
+pub const SECONDS_PER_MINUTE: u64 = 60;
+pub const MINUTES_PER_HOUR: u64 = 60;
+pub const MILLIS_PER_MINUTE: u64 = MILLIS_PER_SECOND * SECONDS_PER_MINUTE;
+pub const MILLIS_PER_HOUR: u64 = MILLIS_PER_MINUTE * MINUTES_PER_HOUR;

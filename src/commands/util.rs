@@ -11,7 +11,7 @@ use crate::{
 	util::{reply, reply_embed},
 	Error,
 	PoiseContext,
-	PrefixContext,
+	PoisePrefixContext,
 };
 
 /// Register slash commands in this server or globally.
@@ -19,7 +19,7 @@ use crate::{
 /// Run with no arguments to register globally, run with argument "local" to
 /// register in-server.
 #[command(owners_only, hide_in_help)]
-pub async fn register(ctx: PrefixContext<'_>, #[flag] local: bool) -> Result<(), Error> {
+pub async fn register(ctx: PoisePrefixContext<'_>, #[flag] local: bool) -> Result<(), Error> {
 	register_slash_commands(ctx, !local)
 		.await
 		.with_context(|| "Failed to register slash commands".to_owned())?;

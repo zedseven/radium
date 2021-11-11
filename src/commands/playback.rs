@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 // Uses
 use anyhow::Context;
 use lavalink_rs::LavalinkClient;
@@ -14,9 +16,12 @@ use songbird::{
 	id::{ChannelId as SongbirdChannelId, GuildId},
 	Songbird,
 };
+use sponsor_block::ActionableSegment;
 use url::Url;
 
 use crate::{
+	constants::ACCEPTED_CATEGORIES,
+	segments::{SkipSegment, TRACK_IDENTIFIER_LENGTH},
 	util::{chop_str, display_time_span, push_chopped_str, reply, reply_embed},
 	Error,
 	PoiseContext,
@@ -176,36 +181,33 @@ pub async fn play(
 	let mut queueable_tracks = Vec::new();
 
 	// Queue up any attachments
-	match ctx {
-		PoiseContext::Prefix(prefix_ctx) => {
-			for attachment in &prefix_ctx.msg.attachments {
-				// Verify the attachment is playable
-				let playable_content = match &attachment.content_type {
-					Some(t) => t.starts_with("audio") || t.starts_with("video"),
-					None => false,
-				};
-				if !playable_content {
-					continue;
-				}
-
-				// Queue it up
-				let mut query_result = lava_client.auto_search_tracks(&attachment.url).await?;
-				for track in &mut query_result.tracks {
-					track.info = match &track.info {
-						Some(old_info) => {
-							let mut new_info = old_info.clone();
-							if old_info.title == UNKNOWN_TITLE {
-								new_info.title = attachment.filename.clone();
-							}
-							Some(new_info)
-						}
-						None => None,
-					}
-				}
-				queueable_tracks.extend_from_slice(&query_result.tracks);
+	if let PoiseContext::Prefix(prefix_ctx) = ctx {
+		for attachment in &prefix_ctx.msg.attachments {
+			// Verify the attachment is playable
+			let playable_content = match &attachment.content_type {
+				Some(t) => t.starts_with("audio") || t.starts_with("video"),
+				None => false,
+			};
+			if !playable_content {
+				continue;
 			}
+
+			// Queue it up
+			let mut query_result = lava_client.auto_search_tracks(&attachment.url).await?;
+			for track in &mut query_result.tracks {
+				track.info = match &track.info {
+					Some(old_info) => {
+						let mut new_info = old_info.clone();
+						if old_info.title.eq(UNKNOWN_TITLE) {
+							new_info.title = attachment.filename.clone();
+						}
+						Some(new_info)
+					}
+					None => None,
+				}
+			}
+			queueable_tracks.extend_from_slice(&query_result.tracks);
 		}
-		PoiseContext::Slash(_) => {}
 	}
 
 	// Load the command query - if playable attachments were also with the message,
@@ -231,12 +233,11 @@ pub async fn play(
 			.collect::<Vec<_>>(),
 	);
 
-	if queueable_tracks.is_empty() {
+	let queueable_tracks_len = queueable_tracks.len();
+	if queueable_tracks_len == 0 {
 		reply(ctx, "Could not find anything for the search query.").await?;
 		return Ok(());
 	}
-
-	let queueable_tracks_len = queueable_tracks.len();
 
 	// For URLs that point to raw files, Lavalink seems to just return them with a
 	// title of "Unknown title" - this is a slightly hacky solution to set the title
@@ -266,12 +267,142 @@ pub async fn play(
 
 	// Queue the tracks up
 	for track in &queueable_tracks {
-		if let Err(e) = lava_client
+		let mut new_track_duration = None;
+		let mut new_start_time = None;
+		let mut new_end_time = None;
+
+		// YouTube SponsorBlock integration
+		'sponsorblock: {
+			if let Some(info) = &track.info {
+				const SEGMENT_COMBINE_THRESHOLD: f32 = 0.2;
+				const SEGMENT_LENGTH_THRESHOLD: f32 = 0.5;
+				const DURATION_DISCARD_THRESHOLD: f32 = 1.0;
+				const MILLIS_PER_SECOND: f32 = 1000.0;
+
+				// No point if it's a stream
+				if !info.is_seekable {
+					break 'sponsorblock;
+				}
+
+				let parsed_uri = Url::parse(&info.uri).expect(
+					"Unable to parse track info URI when it should have been guaranteed to be \
+					 valid",
+				);
+
+				if let Some(video_id) = get_youtube_video_id(&parsed_uri) {
+					if let Ok(segments) = ctx
+						.data()
+						.sponsor_block
+						.fetch_segments(&video_id, ACCEPTED_CATEGORIES)
+						.await
+					{
+						dbg!(&segments);
+
+						// Calculate the track duration
+						let track_duration = info.length as f32 / MILLIS_PER_SECOND;
+
+						// Get the pertinent information and filter out segments that may be
+						// incorrect (submitted before some edit to the video length that
+						// invalidates the timecodes)
+						let mut skip_timecodes = segments
+							.iter()
+							.filter(|s| {
+								(s.video_duration_on_submission - track_duration).abs()
+									<= DURATION_DISCARD_THRESHOLD
+							})
+							.filter_map(|s| match &s.segment {
+								ActionableSegment::Sponsor(t)
+								| ActionableSegment::UnpaidSelfPromotion(t)
+								| ActionableSegment::InteractionReminder(t)
+								| ActionableSegment::IntermissionIntroAnimation(t)
+								| ActionableSegment::EndcardsCredits(t)
+								| ActionableSegment::NonMusic(t) => Some(SkipSegment {
+									start: t.start,
+									end: t.end,
+									is_at_an_end: false,
+								}),
+								_ => None,
+							})
+							.collect::<Vec<_>>();
+						// Ensure the segments are ordered by their time in the content
+						skip_timecodes
+							.sort_unstable_by_key(|t| (t.start * MILLIS_PER_SECOND) as u32);
+						// Combine segments that are close together
+						let mut skip_timecodes_len = skip_timecodes.len();
+						if skip_timecodes_len > 1 {
+							for i in (1..skip_timecodes_len).rev() {
+								if skip_timecodes[i].start - skip_timecodes[i - 1].end
+									> SEGMENT_COMBINE_THRESHOLD
+								{
+									continue;
+								}
+								skip_timecodes[i - 1].end = skip_timecodes[i].end;
+								skip_timecodes.remove(i);
+							}
+						}
+						// Remove segments that are too short to be worth skipping with the Lavalink
+						// seek delay
+						skip_timecodes = skip_timecodes
+							.drain(..)
+							.filter(|t| t.end - t.start >= SEGMENT_LENGTH_THRESHOLD)
+							.collect::<Vec<_>>();
+
+						// Store the new duration, without the skipped segments
+						new_track_duration = Some(
+							info.length
+								- (skip_timecodes.iter().map(|t| t.end - t.start).sum::<f32>()
+									* MILLIS_PER_SECOND) as u64,
+						);
+
+						// Start & end times
+						skip_timecodes_len = skip_timecodes.len();
+						if skip_timecodes_len > 0 {
+							// Set the start time for the track if there's a segment right at the
+							// beginning
+							if skip_timecodes[0].start <= SEGMENT_COMBINE_THRESHOLD {
+								skip_timecodes[0].is_at_an_end = true;
+								new_start_time =
+									Some(Duration::from_secs_f32(skip_timecodes[0].end));
+							}
+							// Set the end time for the track if there's a segment right at the end
+							if (info.length as f32 / MILLIS_PER_SECOND)
+								- skip_timecodes[skip_timecodes_len - 1].end
+								<= SEGMENT_COMBINE_THRESHOLD
+							{
+								skip_timecodes[skip_timecodes_len - 1].is_at_an_end = true;
+								new_end_time = Some(Duration::from_secs_f32(
+									skip_timecodes[skip_timecodes_len - 1].start,
+								));
+							}
+						}
+
+						dbg!(&skip_timecodes);
+
+						// Cache the segments
+						{
+							let mut segment_data_handle = ctx.data().segment_data.lock().unwrap();
+							segment_data_handle.cached_segments.insert(
+								track.track[..TRACK_IDENTIFIER_LENGTH].to_owned(),
+								skip_timecodes,
+							);
+							dbg!(&segment_data_handle);
+						}
+					}
+				}
+			}
+		}
+
+		// Queue
+		let mut queueable = lava_client
 			.play(guild.id.0, track.clone())
-			.requester(ctx.author().id.0)
-			.queue()
-			.await
-		{
+			.requester(ctx.author().id.0);
+		if let Some(start_time) = new_start_time {
+			queueable = queueable.start_time(start_time);
+		}
+		if let Some(end_time) = new_end_time {
+			queueable = queueable.finish_time(end_time);
+		}
+		if let Err(e) = queueable.queue().await {
 			reply(ctx, "Failed to queue up query result.").await?;
 			eprintln!("Failed to queue up query result: {}", e);
 			return Ok(());
@@ -329,6 +460,35 @@ pub async fn play(
 	}
 
 	Ok(())
+}
+fn get_youtube_video_id(uri: &Url) -> Option<String> {
+	if let Some(host) = uri.host_str() {
+		if host.ends_with("youtube.com") {
+			if let Some(query) = uri.query() {
+				let query_parameters = query.split('&');
+				for parameter in query_parameters {
+					if let Some(stripped) = parameter.strip_prefix("v=") {
+						return Some(stripped.to_owned());
+					}
+				}
+				None
+			} else {
+				None
+			}
+		} else if host.ends_with("youtu.be") {
+			Some(
+				uri.path_segments()
+					.expect("Unable to parse URI as a proper path")
+					.last()
+					.expect("Unable to find the last path segment of URI")
+					.to_owned(),
+			)
+		} else {
+			None
+		}
+	} else {
+		None
+	}
 }
 
 /// Skip the current track.
