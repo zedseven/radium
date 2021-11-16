@@ -1,17 +1,20 @@
 // Uses
 use std::collections::HashMap;
 
+use lru::LruCache;
 use poise::serenity::model::id::GuildId;
 
-// Constants
-pub const TRACK_IDENTIFIER_LENGTH: usize = 16;
+use crate::constants::VIDEO_SEGMENT_CACHE_SIZE;
 
 // Definitions
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct SegmentData {
 	pub active_segments: HashMap<GuildId, GuildSegments>,
-	// TODO: Build a proper cache type for this. Support mandatory values and a max entry count.
-	pub cached_segments: HashMap<String, Vec<SkipSegment>>,
+	// This will have a problem if we're inserting close to or more than CACHE_SIZE entries before
+	// tracks can be finished, but this isn't a pressing issue by any means. A solution to that
+	// would be to support mandatory values that can not be removed from the cache until we're done
+	// using them.
+	pub cached_segments: LruCache<String, Option<Vec<SkipSegment>>>,
 }
 
 impl SegmentData {
@@ -19,7 +22,7 @@ impl SegmentData {
 	pub fn new() -> Self {
 		Self {
 			active_segments: HashMap::new(),
-			cached_segments: HashMap::new(),
+			cached_segments: LruCache::new(VIDEO_SEGMENT_CACHE_SIZE),
 		}
 	}
 }
@@ -28,7 +31,7 @@ impl SegmentData {
 // don't have to constantly query what's currently playing in Lavalink
 #[derive(Debug, Clone)]
 pub struct GuildSegments {
-	pub track_name: String,
+	pub track_identifier: String,
 	pub segments: Vec<SkipSegment>,
 }
 

@@ -20,9 +20,20 @@ use sponsor_block::ActionableSegment;
 use url::Url;
 
 use crate::{
-	constants::ACCEPTED_CATEGORIES,
-	segments::{SkipSegment, TRACK_IDENTIFIER_LENGTH},
-	util::{chop_str, display_time_span, push_chopped_str, reply, reply_embed},
+	constants::{
+		ACCEPTED_CATEGORIES,
+		MILLIS_PER_SECOND_F32,
+		VIDEO_SEGMENT_CACHE_IDENTIFIER_LENGTH,
+	},
+	segments::SkipSegment,
+	util::{
+		chop_str,
+		display_timecode,
+		display_timecode_f32,
+		push_chopped_str,
+		reply,
+		reply_embed,
+	},
 	Error,
 	PoiseContext,
 };
@@ -272,12 +283,28 @@ pub async fn play(
 		let mut new_end_time = None;
 
 		// YouTube SponsorBlock integration
+		let track_segments_identifier =
+			track.track[..VIDEO_SEGMENT_CACHE_IDENTIFIER_LENGTH].to_owned();
+		let mut cache_track_with_none = true;
 		'sponsorblock: {
+			// If we already have the segments for this video cached, we don't need to fetch
+			// them again
+			{
+				let mut segment_data_handle = ctx.data().segment_data.lock().unwrap();
+				if segment_data_handle
+					.cached_segments
+					.get(&track_segments_identifier)
+					.is_some()
+				{
+					cache_track_with_none = false;
+					break 'sponsorblock;
+				}
+			}
+
 			if let Some(info) = &track.info {
-				const SEGMENT_COMBINE_THRESHOLD: f32 = 0.2;
+				const SEGMENT_COMBINE_THRESHOLD: f32 = 1.25;
 				const SEGMENT_LENGTH_THRESHOLD: f32 = 0.5;
 				const DURATION_DISCARD_THRESHOLD: f32 = 1.0;
-				const MILLIS_PER_SECOND: f32 = 1000.0;
 
 				// No point if it's a stream
 				if !info.is_seekable {
@@ -296,10 +323,8 @@ pub async fn play(
 						.fetch_segments(&video_id, ACCEPTED_CATEGORIES)
 						.await
 					{
-						dbg!(&segments);
-
 						// Calculate the track duration
-						let track_duration = info.length as f32 / MILLIS_PER_SECOND;
+						let track_duration = info.length as f32 / MILLIS_PER_SECOND_F32;
 
 						// Get the pertinent information and filter out segments that may be
 						// incorrect (submitted before some edit to the video length that
@@ -326,7 +351,7 @@ pub async fn play(
 							.collect::<Vec<_>>();
 						// Ensure the segments are ordered by their time in the content
 						skip_timecodes
-							.sort_unstable_by_key(|t| (t.start * MILLIS_PER_SECOND) as u32);
+							.sort_unstable_by_key(|t| (t.start * MILLIS_PER_SECOND_F32) as u32);
 						// Combine segments that are close together
 						let mut skip_timecodes_len = skip_timecodes.len();
 						if skip_timecodes_len > 1 {
@@ -351,7 +376,7 @@ pub async fn play(
 						new_track_duration = Some(
 							info.length
 								- (skip_timecodes.iter().map(|t| t.end - t.start).sum::<f32>()
-									* MILLIS_PER_SECOND) as u64,
+									* MILLIS_PER_SECOND_F32) as u64,
 						);
 
 						// Start & end times
@@ -365,8 +390,7 @@ pub async fn play(
 									Some(Duration::from_secs_f32(skip_timecodes[0].end));
 							}
 							// Set the end time for the track if there's a segment right at the end
-							if (info.length as f32 / MILLIS_PER_SECOND)
-								- skip_timecodes[skip_timecodes_len - 1].end
+							if (track_duration - skip_timecodes[skip_timecodes_len - 1].end).abs()
 								<= SEGMENT_COMBINE_THRESHOLD
 							{
 								skip_timecodes[skip_timecodes_len - 1].is_at_an_end = true;
@@ -376,19 +400,29 @@ pub async fn play(
 							}
 						}
 
-						dbg!(&skip_timecodes);
-
-						// Cache the segments
+						// Cache the segments if there's segments to cache
+						if skip_timecodes.is_empty() {
+							break 'sponsorblock;
+						}
 						{
 							let mut segment_data_handle = ctx.data().segment_data.lock().unwrap();
-							segment_data_handle.cached_segments.insert(
-								track.track[..TRACK_IDENTIFIER_LENGTH].to_owned(),
-								skip_timecodes,
-							);
-							dbg!(&segment_data_handle);
+							segment_data_handle
+								.cached_segments
+								.put(track_segments_identifier.clone(), Some(skip_timecodes));
 						}
+						cache_track_with_none = false;
 					}
 				}
+			}
+		}
+		// If no segments were found, cache that fact so we don't have to check the next
+		// time the video is requested
+		if cache_track_with_none {
+			{
+				let mut segment_data_handle = ctx.data().segment_data.lock().unwrap();
+				segment_data_handle
+					.cached_segments
+					.put(track_segments_identifier, None);
 			}
 		}
 
@@ -428,7 +462,7 @@ pub async fn play(
 				if track_info.is_stream {
 					LIVE_INDICATOR.to_owned()
 				} else {
-					display_time_span(track_info.length)
+					display_timecode(track_info.length)
 				}
 			),
 		)
@@ -750,7 +784,7 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 
 		let mut ret = String::new();
 		if let Some(length_actual) = length {
-			ret.push_str(display_time_span(position).as_str());
+			ret.push_str(display_timecode(position).as_str());
 			ret.push(' ');
 			let fill_point = position * PROGRESS_BAR_SIZE / length_actual;
 			for _ in 0..fill_point {
@@ -760,11 +794,26 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 				ret.push(EMPTY_BLOCK);
 			}
 			ret.push(' ');
-			ret.push_str(display_time_span(length_actual).as_str());
+			ret.push_str(display_timecode(length_actual).as_str());
 		} else {
-			ret.push_str(display_time_span(position).as_str());
+			ret.push_str(display_timecode(position).as_str());
 			ret.push(' ');
 			ret.push_str(LIVE_INDICATOR);
+		}
+		ret
+	}
+	fn display_segments(segments: &[SkipSegment]) -> String {
+		let mut ret = String::new();
+		for segment in segments {
+			ret.push_str(
+				format!(
+					"- {} - {}",
+					display_timecode_f32(segment.start),
+					display_timecode_f32(segment.end)
+				)
+				.as_str(),
+			);
+			ret.push('\n');
 		}
 		ret
 	}
@@ -782,6 +831,16 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	if let Some(node) = lava_client.nodes().await.get(&guild.id.0) {
 		if let Some(now_playing) = &node.now_playing {
 			let track_info = now_playing.track.info.as_ref().unwrap();
+			let track_segments = {
+				let mut segment_data_handle = ctx.data().segment_data.lock().unwrap();
+				segment_data_handle
+					.cached_segments
+					.get(
+						&now_playing.track.track[..VIDEO_SEGMENT_CACHE_IDENTIFIER_LENGTH]
+							.to_owned(),
+					)
+					.cloned()
+			};
 			reply_embed(ctx, |e| {
 				e.title("Now Playing")
 					.field(
@@ -815,7 +874,11 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 							track_info.position,
 						),
 						false,
-					)
+					);
+				if let Some(Some(segments)) = track_segments {
+					e.field("Skip Segments:", display_segments(&segments), false);
+				}
+				e
 			})
 			.await?;
 			something_playing = true;

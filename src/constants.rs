@@ -14,10 +14,20 @@ pub const PREFIX: &str = "-";
 pub const MAIN_COLOUR: Colour = Colour(0xbf5c4e);
 pub const ACCEPTED_CATEGORIES: AcceptedCategories = AcceptedCategories::all(); // We filter on use
 
+// Operational Constants
+pub const VIDEO_SEGMENT_CACHE_IDENTIFIER_LENGTH: usize = 16;
+pub const VIDEO_SEGMENT_CACHE_SIZE: usize = 2048;
+
 // Utility Constants
 pub const MILLIS_PER_SECOND: u64 = 1000;
-pub const MILLIS_PER_SECOND_F32: f32 = 1000.0;
 pub const SECONDS_PER_MINUTE: u64 = 60;
 pub const MINUTES_PER_HOUR: u64 = 60;
 pub const MILLIS_PER_MINUTE: u64 = MILLIS_PER_SECOND * SECONDS_PER_MINUTE;
 pub const MILLIS_PER_HOUR: u64 = MILLIS_PER_MINUTE * MINUTES_PER_HOUR;
+pub const SECONDS_PER_HOUR: u64 = SECONDS_PER_MINUTE * MINUTES_PER_HOUR;
+pub const MILLIS_PER_SECOND_F32: f32 = MILLIS_PER_SECOND as f32;
+pub const SECONDS_PER_MINUTE_F32: f32 = SECONDS_PER_MINUTE as f32;
+pub const MINUTES_PER_HOUR_F32: f32 = MINUTES_PER_HOUR as f32;
+pub const MILLIS_PER_MINUTE_F32: f32 = MILLIS_PER_MINUTE as f32;
+pub const MILLIS_PER_HOUR_F32: f32 = MILLIS_PER_HOUR as f32;
+pub const SECONDS_PER_HOUR_F32: f32 = SECONDS_PER_HOUR as f32;

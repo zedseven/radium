@@ -11,7 +11,9 @@ use crate::{
 		MILLIS_PER_MINUTE,
 		MILLIS_PER_SECOND,
 		MINUTES_PER_HOUR,
+		SECONDS_PER_HOUR_F32,
 		SECONDS_PER_MINUTE,
+		SECONDS_PER_MINUTE_F32,
 	},
 	PoiseContext,
 };
@@ -76,7 +78,7 @@ pub fn is_slash_context(ctx: &PoiseContext<'_>) -> bool {
 	}
 }
 
-pub fn display_time_span(millis: u64) -> String {
+pub fn display_timecode(millis: u64) -> String {
 	if millis >= MILLIS_PER_HOUR {
 		format!(
 			"{:02}:{:02}:{:02}",
@@ -89,6 +91,23 @@ pub fn display_time_span(millis: u64) -> String {
 			"{:02}:{:02}",
 			millis / MILLIS_PER_MINUTE,
 			(millis / MILLIS_PER_SECOND) % SECONDS_PER_MINUTE
+		)
+	}
+}
+
+pub fn display_timecode_f32(seconds: f32) -> String {
+	if seconds >= SECONDS_PER_HOUR_F32 {
+		format!(
+			"{:02.0}:{:02.0}:{:02.0}",
+			(seconds / SECONDS_PER_HOUR_F32).floor(),
+			((seconds / SECONDS_PER_MINUTE_F32) % SECONDS_PER_HOUR_F32).floor(),
+			(seconds % SECONDS_PER_MINUTE_F32).floor()
+		)
+	} else {
+		format!(
+			"{:02.0}:{:02.0}",
+			(seconds / SECONDS_PER_MINUTE_F32).floor(),
+			(seconds % SECONDS_PER_MINUTE_F32).floor()
 		)
 	}
 }
