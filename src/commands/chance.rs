@@ -5,7 +5,7 @@ use poise::{command, serenity::model::misc::Mentionable};
 use rand::{distributions::Uniform, thread_rng, Rng};
 
 use crate::{
-	util::{escape_str, is_slash_context, reply, reply_embed, reply_plain},
+	util::{escape_str, is_application_context, reply, reply_embed, reply_plain},
 	Error,
 	PoiseContext,
 };
@@ -27,7 +27,7 @@ const MAX_FIELD_VALUE: usize = 1024;
 ///
 /// You can do whatever math you want with the dice values, or even do pure math
 /// with no dice involved. (eg. `/roll (2d20b + 1d8) ^ 2 / 3`)
-#[command(slash_command, aliases("eval", "evaluate"))]
+#[command(prefix_command, slash_command, aliases("eval", "evaluate"))]
 pub async fn roll(
 	ctx: PoiseContext<'_>,
 	#[rest]
@@ -35,7 +35,7 @@ pub async fn roll(
 	                 for."]
 	command: String,
 ) -> Result<(), Error> {
-	let slash_command = is_slash_context(&ctx);
+	let slash_command = is_application_context(&ctx);
 
 	let annotation_index = command.find(ANNOTATION_CHAR);
 	let command_slice = match annotation_index {

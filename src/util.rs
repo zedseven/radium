@@ -1,7 +1,7 @@
 // Uses
 use anyhow::{Context, Error};
 use lazy_static::lazy_static;
-use poise::{send_reply, serenity::builder::CreateEmbed};
+use poise::{send_reply, serenity::builder::CreateEmbed, ReplyHandle};
 use regex::Regex;
 
 use crate::{
@@ -19,13 +19,19 @@ use crate::{
 };
 
 // Functions
-pub async fn reply<S: ToString>(ctx: PoiseContext<'_>, msg: S) -> Result<(), Error> {
+pub async fn reply<S: ToString>(
+	ctx: PoiseContext<'_>,
+	msg: S,
+) -> Result<Option<ReplyHandle<'_>>, Error> {
 	send_reply(ctx, |m| m.embed(|e| e.colour(MAIN_COLOUR).description(msg)))
 		.await
 		.with_context(|| "Failed to send message")
 }
 
-pub async fn reply_plain<S: ToString>(ctx: PoiseContext<'_>, msg: S) -> Result<(), Error> {
+pub async fn reply_plain<S: ToString>(
+	ctx: PoiseContext<'_>,
+	msg: S,
+) -> Result<Option<ReplyHandle<'_>>, Error> {
 	send_reply(ctx, |m| m.content(msg.to_string()))
 		.await
 		.with_context(|| "Failed to send message")
@@ -34,7 +40,7 @@ pub async fn reply_plain<S: ToString>(ctx: PoiseContext<'_>, msg: S) -> Result<(
 pub async fn reply_embed(
 	ctx: PoiseContext<'_>,
 	embed: impl FnOnce(&mut CreateEmbed) -> &mut CreateEmbed,
-) -> Result<(), Error> {
+) -> Result<Option<ReplyHandle<'_>>, Error> {
 	send_reply(ctx, |m| m.embed(|e| embed(e.colour(MAIN_COLOUR))))
 		.await
 		.with_context(|| "Failed to send message")
@@ -71,9 +77,9 @@ pub fn chop_str(s: &str, max_len: usize) -> String {
 	base
 }
 
-pub fn is_slash_context(ctx: &PoiseContext<'_>) -> bool {
+pub fn is_application_context(ctx: &PoiseContext<'_>) -> bool {
 	match ctx {
-		PoiseContext::Slash(_) => true,
+		PoiseContext::Application(_) => true,
 		PoiseContext::Prefix(_) => false,
 	}
 }

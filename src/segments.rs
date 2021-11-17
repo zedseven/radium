@@ -1,8 +1,8 @@
 // Uses
 use std::collections::HashMap;
 
+use lavalink_rs::model::GuildId;
 use lru::LruCache;
-use poise::serenity::model::id::GuildId;
 
 use crate::constants::VIDEO_SEGMENT_CACHE_SIZE;
 

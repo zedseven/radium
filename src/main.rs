@@ -48,14 +48,8 @@ use anyhow::Context;
 use dotenv::dotenv;
 use lavalink_rs::LavalinkClient;
 use poise::{
-	defaults::on_error,
-	serenity::{
-		self,
-		client::parse_token,
-		http::Http,
-		model::id::{ApplicationId, GuildId},
-		Client,
-	},
+	builtins::on_error,
+	serenity::{self, client::parse_token, http::Http, model::id::GuildId},
 	EditTracker,
 	Framework,
 	FrameworkOptions,
@@ -137,6 +131,9 @@ async fn main() -> Result<(), Error> {
 	owners.insert(owner_id);
 	let mut options = FrameworkOptions {
 		prefix_options: PrefixFrameworkOptions {
+			prefix: Some(PREFIX.to_owned()),
+			mention_as_prefix: true,
+			case_insensitive_commands: true,
 			edit_tracker: Some(EditTracker::for_timespan(Duration::from_secs(3600))),
 			..PrefixFrameworkOptions::default()
 		},
@@ -202,21 +199,21 @@ async fn main() -> Result<(), Error> {
 		*data_guard = Some(data.clone());
 	}
 
-	let framework = Framework::new(
-		PREFIX.to_owned(),
-		ApplicationId(app_id.0),
-		move |_ctx, _ready, _framework| Box::pin(async move { Ok(data) }),
-		options,
-	);
-
-	framework
-		.start(
-			Client::builder(&token)
+	Framework::build()
+		.options(options)
+		.token(&token)
+		.client_settings(|client_builder| {
+			client_builder
 				.raw_event_handler(SerenityHandler)
-				.register_songbird_with(songbird),
-		)
+				.register_songbird_with(songbird)
+		})
+		.user_data_setup(move |_ctx, _ready, _framework| Box::pin(async move { Ok(data) }))
+		.build()
 		.await
-		.with_context(|| "Failed to start up".to_owned())?;
+		.with_context(|| "Failed to build the bot framework")?
+		.start()
+		.await
+		.with_context(|| "Failed to start up")?;
 
 	Ok(())
 }

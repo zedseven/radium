@@ -6,10 +6,10 @@ use std::{
 
 use lavalink_rs::{
 	gateway::LavalinkEventHandler,
-	model::{PlayerUpdate, TrackFinish, TrackStart},
+	model::{GuildId, PlayerUpdate, TrackStart},
 	LavalinkClient,
 };
-use poise::serenity::{async_trait, model::id::GuildId};
+use poise::serenity::async_trait;
 use tokio::time::{sleep, Instant};
 
 use crate::{
@@ -28,7 +28,7 @@ impl LavalinkEventHandler for LavalinkHandler {
 	async fn track_start(&self, _client: LavalinkClient, event: TrackStart) {
 		update_segment_data(
 			&self.data,
-			GuildId(event.guild_id),
+			event.guild_id,
 			Some(event.track[..VIDEO_SEGMENT_CACHE_IDENTIFIER_LENGTH].to_owned()),
 		);
 	}
@@ -50,7 +50,7 @@ impl LavalinkEventHandler for LavalinkHandler {
 			let segment_data_handle = data_handle.as_ref().unwrap().segment_data.lock().unwrap();
 			segment_data_handle
 				.active_segments
-				.get(&GuildId(event.guild_id))
+				.get(&event.guild_id)
 				.cloned()
 		};
 		let mut change_guild_track = None;
@@ -76,7 +76,7 @@ impl LavalinkEventHandler for LavalinkHandler {
 						let current_track_name = client
 							.nodes()
 							.await
-							.get(&event.guild_id)
+							.get(&event.guild_id.0)
 							.unwrap()
 							.now_playing
 							.as_ref()
@@ -113,7 +113,7 @@ impl LavalinkEventHandler for LavalinkHandler {
 		// The nested Option kinda sucks, but it represents the need to make a change
 		// followed by the need to set it to a specific value or just to unset it
 		if let Some(change_active_track) = change_guild_track {
-			update_segment_data(&self.data, GuildId(event.guild_id), change_active_track);
+			update_segment_data(&self.data, event.guild_id, change_active_track);
 		}
 	}
 

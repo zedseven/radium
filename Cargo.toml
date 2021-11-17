@@ -1,6 +1,6 @@
 [package]
 name = "radium"
-version = "1.2.0"
+version = "1.3.0"
 authors = ["Zacchary Dempsey-Plante <zacc@ztdp.ca>"]
 edition = "2021"
 license = "GPL-3.0-or-later"
@@ -9,7 +9,7 @@ description = "A simple music & dice bot made for personal use."
 [dependencies]
 anyhow = "1.0"
 dotenv = "0.15"
-lavalink-rs = { git = "https://gitlab.com/vicky5124/lavalink-rs", features = ["rustls"] }
+lavalink-rs = { git = "https://gitlab.com/vicky5124/lavalink-rs", features = ["rustls", "serenity"] }
 lazy_static = "1.4"
 lru = "0.7"
 parse_duration = "2.1"
@@ -21,6 +21,12 @@ sponsor-block = "0.2"
 tokio = { version = "1.10", features = ["macros", "rt-multi-thread"] }
 url = "2.2"
 
+[dependencies.serenity]
+git = "https://github.com/kangalioo/serenity"
+branch = "poise-tailored"
+default-features = false
+features = ["builder", "cache", "client", "gateway", "model", "utils", "rustls_backend", "unstable_discord_api", "collector"]
+
 [patch.crates-io]
 # Potentially have to run `cargo update -p serenity:<version> --precise <whatever version is in the git repo>`
-serenity = { git = "https://github.com/serenity-rs/serenity", branch = "next" }
+serenity = { git = "https://github.com/kangalioo/serenity", branch = "poise-tailored" }

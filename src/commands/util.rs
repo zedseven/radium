@@ -1,8 +1,8 @@
 // Uses
 use anyhow::Context;
 use poise::{
+	builtins::{help as poise_help, register_application_commands, HelpResponseMode},
 	command,
-	defaults::{help as poise_help, register_slash_commands, HelpResponseMode},
 	serenity::model::misc::Mentionable,
 };
 
@@ -18,9 +18,9 @@ use crate::{
 ///
 /// Run with no arguments to register globally, run with argument "local" to
 /// register in-server.
-#[command(owners_only, hide_in_help)]
+#[command(prefix_command, owners_only, hide_in_help)]
 pub async fn register(ctx: PoisePrefixContext<'_>, #[flag] local: bool) -> Result<(), Error> {
-	register_slash_commands(ctx, !local)
+	register_application_commands(PoiseContext::Prefix(ctx), !local)
 		.await
 		.with_context(|| "Failed to register slash commands".to_owned())?;
 	Ok(())
@@ -32,7 +32,7 @@ pub async fn register(ctx: PoisePrefixContext<'_>, #[flag] local: bool) -> Resul
 /// detailed description of what the command does, and how to use it.
 ///
 /// Of course, if you're seeing this, you already know you can do that.
-#[command(slash_command, track_edits, aliases("h"))]
+#[command(prefix_command, slash_command, track_edits, aliases("h"))]
 pub async fn help(
 	ctx: PoiseContext<'_>,
 	#[description = "A specific command to show help about."] command: Option<String>,
@@ -56,7 +56,7 @@ pub async fn help(
 /// Get basic information about Radium.
 ///
 /// There isn't much else to say - just use the command.
-#[command(slash_command)]
+#[command(prefix_command, slash_command)]
 pub async fn about(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	reply_embed(ctx, |e| {
 		e.title("Radium")
@@ -80,7 +80,7 @@ pub async fn about(ctx: PoiseContext<'_>) -> Result<(), Error> {
 ///
 /// It's sticking around for posterity and as a quick way to test if the bot is
 /// operational.
-#[command(slash_command)]
+#[command(prefix_command, slash_command)]
 pub async fn ping(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	reply(ctx, "Pong!").await?;
 	Ok(())

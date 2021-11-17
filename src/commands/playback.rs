@@ -1,6 +1,6 @@
+// Uses
 use std::time::Duration;
 
-// Uses
 use anyhow::Context;
 use lavalink_rs::LavalinkClient;
 use parse_duration::parse as parse_duration;
@@ -61,7 +61,7 @@ where
 
 	match handler {
 		Ok(connection_info) => Ok(lavalink
-			.create_session(&connection_info)
+			.create_session_with_songbird(&connection_info)
 			.await
 			.map_err(Box::new)?),
 		Err(e) => Err(Box::new(e)),
@@ -76,7 +76,7 @@ fn authour_channel_id(guild: &Guild, authour_id: UserId) -> Option<ChannelId> {
 }
 
 /// Have Radium join the voice channel you're in.
-#[command(slash_command, aliases("j"))]
+#[command(prefix_command, slash_command, aliases("j"))]
 pub async fn join(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild = if let Some(guild) = ctx.guild() {
 		guild
@@ -106,15 +106,15 @@ pub async fn join(ctx: PoiseContext<'_>) -> Result<(), Error> {
 				ctx,
 				format!("Error joining {}: {}", channel_id.mention(), e),
 			)
-			.await?;
+			.await?
 		}
-	}
+	};
 
 	Ok(())
 }
 
 /// Have Radium leave the voice channel it's in, if any.
-#[command(slash_command, aliases("l"))]
+#[command(prefix_command, slash_command, aliases("l"))]
 pub async fn leave(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild = if let Some(guild) = ctx.guild() {
 		guild
@@ -150,7 +150,7 @@ pub async fn leave(ctx: PoiseContext<'_>) -> Result<(), Error> {
 ///
 /// You may also use this command with attachments (audio or video files),
 /// though in that case you have to use the non-slash version of the command.
-#[command(slash_command, aliases("p"))]
+#[command(prefix_command, slash_command, aliases("p"))]
 pub async fn play(
 	ctx: PoiseContext<'_>,
 	#[rest]
@@ -427,14 +427,13 @@ pub async fn play(
 		}
 
 		// Queue
-		let mut queueable = lava_client
-			.play(guild.id.0, track.clone())
-			.requester(ctx.author().id.0);
+		let mut queueable = lava_client.play(guild.id.0, track.clone());
+		queueable.requester(ctx.author().id.0);
 		if let Some(start_time) = new_start_time {
-			queueable = queueable.start_time(start_time);
+			queueable.start_time(start_time);
 		}
 		if let Some(end_time) = new_end_time {
-			queueable = queueable.finish_time(end_time);
+			queueable.finish_time(end_time);
 		}
 		if let Err(e) = queueable.queue().await {
 			reply(ctx, "Failed to queue up query result.").await?;
@@ -526,7 +525,7 @@ fn get_youtube_video_id(uri: &Url) -> Option<String> {
 }
 
 /// Skip the current track.
-#[command(slash_command, aliases("next", "stop", "n", "s"))]
+#[command(prefix_command, slash_command, aliases("next", "stop", "n", "s"))]
 pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild = if let Some(guild) = ctx.guild() {
 		guild
@@ -572,7 +571,7 @@ pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 /// Pause the current track.
 ///
 /// The opposite of `resume`.
-#[command(slash_command)]
+#[command(prefix_command, slash_command)]
 pub async fn pause(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild = if let Some(guild) = ctx.guild() {
 		guild
@@ -597,7 +596,7 @@ pub async fn pause(ctx: PoiseContext<'_>) -> Result<(), Error> {
 /// Resume the current track.
 ///
 /// The opposite of `pause`.
-#[command(slash_command)]
+#[command(prefix_command, slash_command)]
 pub async fn resume(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild = if let Some(guild) = ctx.guild() {
 		guild
@@ -625,7 +624,7 @@ pub async fn resume(ctx: PoiseContext<'_>) -> Result<(), Error> {
 /// time values (`2m35s`).
 ///
 /// If the time specified is past the end of the track, the track ends.
-#[command(slash_command, aliases("scrub", "jump"))]
+#[command(prefix_command, slash_command, aliases("scrub", "jump"))]
 pub async fn seek(
 	ctx: PoiseContext<'_>,
 	#[rest]
@@ -739,7 +738,7 @@ pub async fn seek(
 /// In addition to clearing the queue, this also resets the queue position for
 /// new tracks. This is the only way this happens other than when the bot goes
 /// offline.
-#[command(slash_command, aliases("c"))]
+#[command(prefix_command, slash_command, aliases("c"))]
 pub async fn clear(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild = if let Some(guild) = ctx.guild() {
 		guild
@@ -772,6 +771,7 @@ pub async fn clear(ctx: PoiseContext<'_>) -> Result<(), Error> {
 /// Otherwise, if the track is a live stream, only the time it's been playing
 /// will be displayed.
 #[command(
+	prefix_command,
 	slash_command,
 	rename = "nowplaying",
 	aliases("np", "position", "current", "rn")
@@ -892,7 +892,7 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 }
 
 /// Show the playback queue.
-#[command(slash_command, aliases("q"))]
+#[command(prefix_command, slash_command, aliases("q"))]
 pub async fn queue(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild = if let Some(guild) = ctx.guild() {
 		guild
