@@ -6,7 +6,7 @@ use std::{
 
 use lavalink_rs::{
 	gateway::LavalinkEventHandler,
-	model::{GuildId, PlayerUpdate, TrackStart},
+	model::{GuildId, PlayerUpdate, TrackStart, TrackStuck},
 	LavalinkClient,
 };
 use poise::serenity::async_trait;
@@ -25,6 +25,7 @@ pub struct LavalinkHandler {
 
 #[async_trait]
 impl LavalinkEventHandler for LavalinkHandler {
+	// Update the active segments info for new tracks
 	async fn track_start(&self, _client: LavalinkClient, event: TrackStart) {
 		update_segment_data(
 			&self.data,
@@ -117,10 +118,12 @@ impl LavalinkEventHandler for LavalinkHandler {
 		}
 	}
 
-	// TODO: To be implemented when we update to the latest version of lavalink-rs
-	/*async fn track_stuck(&self, _client: LavalinkClient, event: TrackStuck) {
+	// Automatically skip if a track is stuck
+	async fn track_stuck(&self, client: LavalinkClient, event: TrackStuck) {
+		println!("A currently-playing track is stuck. Skipping.");
 		dbg!(&event);
-	}*/
+		client.skip(event.guild_id).await;
+	}
 }
 
 /// Updates the active track for a guild.
