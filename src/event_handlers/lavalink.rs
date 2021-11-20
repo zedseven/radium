@@ -6,17 +6,13 @@ use std::{
 
 use lavalink_rs::{
 	gateway::LavalinkEventHandler,
-	model::{GuildId, PlayerUpdate, TrackStart, TrackStuck},
+	model::{GuildId, PlayerUpdate, TrackFinish, TrackStart, TrackStuck},
 	LavalinkClient,
 };
 use poise::serenity::async_trait;
 use tokio::time::{sleep, Instant};
 
-use crate::{
-	constants::{MILLIS_PER_SECOND_F32, VIDEO_SEGMENT_CACHE_IDENTIFIER_LENGTH},
-	segments::GuildSegments,
-	DataArc,
-};
+use crate::{constants::MILLIS_PER_SECOND_F32, segments::GuildSegments, DataArc};
 
 // The event handler for all Lavalink events
 pub struct LavalinkHandler {
@@ -26,17 +22,18 @@ pub struct LavalinkHandler {
 #[async_trait]
 impl LavalinkEventHandler for LavalinkHandler {
 	// Update the active segments info for new tracks
-	async fn track_start(&self, _client: LavalinkClient, event: TrackStart) {
-		update_segment_data(
-			&self.data,
-			event.guild_id,
-			Some(event.track[..VIDEO_SEGMENT_CACHE_IDENTIFIER_LENGTH].to_owned()),
-		);
+	async fn track_start(&self, client: LavalinkClient, event: TrackStart) {
+		let identifier = client
+			.decode_track(event.track)
+			.await
+			.expect("Unable to decode event track string")
+			.identifier;
+		update_segment_data(&self.data, event.guild_id, Some(identifier));
 	}
 
-	/*async fn track_finish(&self, _client: LavalinkClient, event: TrackFinish) {
-		//println!("Track finished!\nGuild: {}", event.guild_id);
-	}*/
+	async fn track_finish(&self, _client: LavalinkClient, event: TrackFinish) {
+		dbg!(&event);
+	}
 
 	// During video playback, check regularly if we're close to a segment to skip
 	async fn player_update(&self, client: LavalinkClient, event: PlayerUpdate) {
@@ -62,7 +59,7 @@ impl LavalinkEventHandler for LavalinkHandler {
 				for segment in &guild_segments.segments {
 					// Segments at the start and end are handled by Lavalink itself -
 					// don't touch them. We also skip segments that have already passed.
-					if segment.is_at_an_end || segment.end - SEGMENT_END_EPSILON <= position_f32 {
+					if segment.is_at_an_end() || segment.end - SEGMENT_END_EPSILON <= position_f32 {
 						continue;
 					}
 					next_segment_opt = Some(segment);
@@ -73,8 +70,8 @@ impl LavalinkEventHandler for LavalinkHandler {
 					if time_until_segment <= UPDATE_DELAY_PERIOD {
 						// Verify the segment we're looking at is for the current track
 						// We check this here and not sooner because it requires fetching the
-						// current node for Lavalink, so we don't want to do it every update
-						let current_track_name = client
+						// current node for Lavalink, so we don't want to do that every update
+						let current_track_identifier = client
 							.nodes()
 							.await
 							.get(&event.guild_id.0)
@@ -83,10 +80,13 @@ impl LavalinkEventHandler for LavalinkHandler {
 							.as_ref()
 							.unwrap()
 							.track
-							.track[..VIDEO_SEGMENT_CACHE_IDENTIFIER_LENGTH]
-							.to_owned();
-						if !current_track_name.eq(guild_segments.track_identifier.as_str()) {
-							change_guild_track = Some(Some(current_track_name));
+							.info
+							.as_ref()
+							.expect("Playing track is missing all info")
+							.identifier
+							.clone();
+						if !current_track_identifier.eq(guild_segments.track_identifier.as_str()) {
+							change_guild_track = Some(Some(current_track_identifier));
 							break 'seek_block;
 						}
 

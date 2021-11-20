@@ -15,7 +15,6 @@ pub const MAIN_COLOUR: Colour = Colour(0xbf5c4e);
 pub const ACCEPTED_CATEGORIES: AcceptedCategories = AcceptedCategories::all(); // We filter on use
 
 // Operational Constants
-pub const VIDEO_SEGMENT_CACHE_IDENTIFIER_LENGTH: usize = 16;
 pub const VIDEO_SEGMENT_CACHE_SIZE: usize = 2048;
 
 // Utility Constants

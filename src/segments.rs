@@ -41,5 +41,12 @@ pub struct SkipSegment {
 	pub end: f32,
 	// Start and end segments should still be cacheable, but shouldn't be considered by the
 	// mid-playback skipping
-	pub is_at_an_end: bool,
+	pub is_at_start: bool,
+	pub is_at_end: bool,
+}
+
+impl SkipSegment {
+	pub fn is_at_an_end(&self) -> bool {
+		self.is_at_start || self.is_at_end
+	}
 }

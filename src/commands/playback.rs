@@ -20,11 +20,7 @@ use sponsor_block::ActionableSegment;
 use url::Url;
 
 use crate::{
-	constants::{
-		ACCEPTED_CATEGORIES,
-		MILLIS_PER_SECOND_F32,
-		VIDEO_SEGMENT_CACHE_IDENTIFIER_LENGTH,
-	},
+	constants::{ACCEPTED_CATEGORIES, MILLIS_PER_SECOND_F32},
 	segments::SkipSegment,
 	util::{
 		chop_str,
@@ -116,8 +112,8 @@ pub async fn join(ctx: PoiseContext<'_>) -> Result<(), Error> {
 /// Have Radium leave the voice channel it's in, if any.
 #[command(prefix_command, slash_command, aliases("l"))]
 pub async fn leave(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild = if let Some(guild) = ctx.guild() {
-		guild
+	let guild_id = if let Some(guild_id) = ctx.guild_id() {
+		guild_id
 	} else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
@@ -125,13 +121,13 @@ pub async fn leave(ctx: PoiseContext<'_>) -> Result<(), Error> {
 
 	let manager = &ctx.data().songbird;
 
-	if manager.get(guild.id).is_some() {
-		if let Err(e) = manager.remove(guild.id).await {
+	if manager.get(guild_id).is_some() {
+		if let Err(e) = manager.remove(guild_id).await {
 			reply(ctx, format!("Error leaving voice channel: {}", e)).await?;
 		}
 
 		let lava_client = &ctx.data().lavalink;
-		lava_client.destroy(guild.id.0).await?;
+		lava_client.destroy(guild_id.0).await?;
 
 		reply(ctx, "Left the voice channel.").await?;
 	} else {
@@ -283,19 +279,36 @@ pub async fn play(
 		let mut new_end_time = None;
 
 		// YouTube SponsorBlock integration
-		let track_segments_identifier =
-			track.track[..VIDEO_SEGMENT_CACHE_IDENTIFIER_LENGTH].to_owned();
+		let track_segments_identifier_opt = track.info.as_ref().map(|i| &i.identifier);
 		let mut cache_track_with_none = true;
 		'sponsorblock: {
+			let track_segments_identifier;
+			if let Some(identifier) = track_segments_identifier_opt {
+				track_segments_identifier = identifier;
+			} else {
+				break 'sponsorblock;
+			}
+
 			// If we already have the segments for this video cached, we don't need to fetch
 			// them again
 			{
 				let mut segment_data_handle = ctx.data().segment_data.lock().unwrap();
-				if segment_data_handle
+				if let Some(Some(segments)) = segment_data_handle
 					.cached_segments
-					.get(&track_segments_identifier)
-					.is_some()
+					.get(track_segments_identifier)
 				{
+					// Load the special start and end times if necessary
+					let segments_len = segments.len();
+					if segments_len > 0 {
+						if segments[0].is_at_start {
+							new_start_time = Some(Duration::from_secs_f32(segments[0].end));
+						}
+						if segments[segments_len - 1].is_at_end {
+							new_end_time =
+								Some(Duration::from_secs_f32(segments[segments_len - 1].start));
+						}
+					}
+					// Break
 					cache_track_with_none = false;
 					break 'sponsorblock;
 				}
@@ -332,8 +345,12 @@ pub async fn play(
 						let mut skip_timecodes = segments
 							.iter()
 							.filter(|s| {
-								(s.video_duration_on_submission - track_duration).abs()
-									<= DURATION_DISCARD_THRESHOLD
+								// Because some video durations are 0 (the segment was added before
+								// video durations were recorded)
+								let invalid_video_duration = s.video_duration_on_submission == 0.0;
+								invalid_video_duration
+									|| (s.video_duration_on_submission - track_duration).abs()
+										<= DURATION_DISCARD_THRESHOLD
 							})
 							.filter_map(|s| match &s.segment {
 								ActionableSegment::Sponsor(t)
@@ -344,7 +361,8 @@ pub async fn play(
 								| ActionableSegment::NonMusic(t) => Some(SkipSegment {
 									start: t.start,
 									end: t.end,
-									is_at_an_end: false,
+									is_at_start: false,
+									is_at_end: false,
 								}),
 								_ => None,
 							})
@@ -385,7 +403,7 @@ pub async fn play(
 							// Set the start time for the track if there's a segment right at the
 							// beginning
 							if skip_timecodes[0].start <= SEGMENT_COMBINE_THRESHOLD {
-								skip_timecodes[0].is_at_an_end = true;
+								skip_timecodes[0].is_at_start = true;
 								new_start_time =
 									Some(Duration::from_secs_f32(skip_timecodes[0].end));
 							}
@@ -393,7 +411,7 @@ pub async fn play(
 							if (track_duration - skip_timecodes[skip_timecodes_len - 1].end).abs()
 								<= SEGMENT_COMBINE_THRESHOLD
 							{
-								skip_timecodes[skip_timecodes_len - 1].is_at_an_end = true;
+								skip_timecodes[skip_timecodes_len - 1].is_at_end = true;
 								new_end_time = Some(Duration::from_secs_f32(
 									skip_timecodes[skip_timecodes_len - 1].start,
 								));
@@ -418,11 +436,11 @@ pub async fn play(
 		// If no segments were found, cache that fact so we don't have to check the next
 		// time the video is requested
 		if cache_track_with_none {
-			{
+			if let Some(track_segments_identifier) = track_segments_identifier_opt {
 				let mut segment_data_handle = ctx.data().segment_data.lock().unwrap();
 				segment_data_handle
 					.cached_segments
-					.put(track_segments_identifier, None);
+					.put(track_segments_identifier.clone(), None);
 			}
 		}
 
@@ -527,8 +545,8 @@ fn get_youtube_video_id(uri: &Url) -> Option<String> {
 /// Skip the current track.
 #[command(prefix_command, slash_command, aliases("next", "stop", "n", "s"))]
 pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild = if let Some(guild) = ctx.guild() {
-		guild
+	let guild_id = if let Some(guild_id) = ctx.guild_id() {
+		guild_id
 	} else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
@@ -536,19 +554,19 @@ pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 
 	let lava_client = &ctx.data().lavalink;
 
-	if let Some(track) = lava_client.skip(guild.id.0).await {
+	if let Some(track) = lava_client.skip(guild_id.0).await {
 		let track_info = track.track.info.as_ref().unwrap();
 		// If the queue is now empty, the player needs to be stopped
 		if lava_client
 			.nodes()
 			.await
-			.get(&guild.id.0)
+			.get(&guild_id.0)
 			.unwrap()
 			.queue
 			.is_empty()
 		{
 			lava_client
-				.stop(guild.id.0)
+				.stop(guild_id.0)
 				.await
 				.with_context(|| "Failed to stop playback of the current track".to_owned())?;
 		}
@@ -573,8 +591,8 @@ pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 /// The opposite of `resume`.
 #[command(prefix_command, slash_command)]
 pub async fn pause(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild = if let Some(guild) = ctx.guild() {
-		guild
+	let guild_id = if let Some(guild_id) = ctx.guild_id() {
+		guild_id
 	} else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
@@ -582,7 +600,7 @@ pub async fn pause(ctx: PoiseContext<'_>) -> Result<(), Error> {
 
 	let lava_client = &ctx.data().lavalink;
 
-	if let Err(e) = lava_client.pause(guild.id.0).await {
+	if let Err(e) = lava_client.pause(guild_id.0).await {
 		reply(ctx, "Failed to pause playback.").await?;
 		eprintln!("Failed to pause playback: {}", e);
 		return Ok(());
@@ -598,8 +616,8 @@ pub async fn pause(ctx: PoiseContext<'_>) -> Result<(), Error> {
 /// The opposite of `pause`.
 #[command(prefix_command, slash_command)]
 pub async fn resume(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild = if let Some(guild) = ctx.guild() {
-		guild
+	let guild_id = if let Some(guild_id) = ctx.guild_id() {
+		guild_id
 	} else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
@@ -607,7 +625,7 @@ pub async fn resume(ctx: PoiseContext<'_>) -> Result<(), Error> {
 
 	let lava_client = &ctx.data().lavalink;
 
-	if let Err(e) = lava_client.resume(guild.id.0).await {
+	if let Err(e) = lava_client.resume(guild_id.0).await {
 		reply(ctx, "Failed to resume playback.").await?;
 		eprintln!("Failed to resume playback: {}", e);
 		return Ok(());
@@ -713,8 +731,8 @@ pub async fn seek(
 	};
 
 	// Seek to the parsed time
-	let guild = if let Some(guild) = ctx.guild() {
-		guild
+	let guild_id = if let Some(guild_id) = ctx.guild_id() {
+		guild_id
 	} else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
@@ -722,7 +740,7 @@ pub async fn seek(
 
 	let lava_client = &ctx.data().lavalink;
 
-	if let Err(e) = lava_client.seek(guild.id.0, time_dur).await {
+	if let Err(e) = lava_client.seek(guild_id.0, time_dur).await {
 		reply(ctx, "Failed to seek to the specified time.").await?;
 		eprintln!("Failed to seek to the specified time: {}", e);
 		return Ok(());
@@ -740,8 +758,8 @@ pub async fn seek(
 /// offline.
 #[command(prefix_command, slash_command, aliases("c"))]
 pub async fn clear(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild = if let Some(guild) = ctx.guild() {
-		guild
+	let guild_id = if let Some(guild_id) = ctx.guild_id() {
+		guild_id
 	} else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
@@ -749,16 +767,16 @@ pub async fn clear(ctx: PoiseContext<'_>) -> Result<(), Error> {
 
 	let lava_client = &ctx.data().lavalink;
 
-	while lava_client.skip(guild.id.0).await.is_some() {}
+	while lava_client.skip(guild_id.0).await.is_some() {}
 	lava_client
-		.stop(guild.id.0)
+		.stop(guild_id.0)
 		.await
 		.with_context(|| "Failed to stop playback of the current track".to_owned())?;
 	reply(ctx, "The queue is now empty.").await?;
 
 	{
 		let mut hash_map = ctx.data().queued_count.lock().unwrap();
-		let queued_count = hash_map.entry(guild.id).or_default();
+		let queued_count = hash_map.entry(guild_id).or_default();
 		*queued_count = 0;
 	}
 
@@ -818,8 +836,8 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		ret
 	}
 
-	let guild = if let Some(guild) = ctx.guild() {
-		guild
+	let guild_id = if let Some(guild_id) = ctx.guild_id() {
+		guild_id
 	} else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
@@ -828,17 +846,14 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let lava_client = &ctx.data().lavalink;
 
 	let mut something_playing = false;
-	if let Some(node) = lava_client.nodes().await.get(&guild.id.0) {
+	if let Some(node) = lava_client.nodes().await.get(&guild_id.0) {
 		if let Some(now_playing) = &node.now_playing {
 			let track_info = now_playing.track.info.as_ref().unwrap();
 			let track_segments = {
 				let mut segment_data_handle = ctx.data().segment_data.lock().unwrap();
 				segment_data_handle
 					.cached_segments
-					.get(
-						&now_playing.track.track[..VIDEO_SEGMENT_CACHE_IDENTIFIER_LENGTH]
-							.to_owned(),
-					)
+					.get(&track_info.identifier)
 					.cloned()
 			};
 			reply_embed(ctx, |e| {
@@ -894,8 +909,8 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 /// Show the playback queue.
 #[command(prefix_command, slash_command, aliases("q"))]
 pub async fn queue(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild = if let Some(guild) = ctx.guild() {
-		guild
+	let guild_id = if let Some(guild_id) = ctx.guild_id() {
+		guild_id
 	} else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
@@ -904,7 +919,7 @@ pub async fn queue(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let lava_client = &ctx.data().lavalink;
 
 	let mut something_in_queue = false;
-	if let Some(node) = lava_client.nodes().await.get(&guild.id.0) {
+	if let Some(node) = lava_client.nodes().await.get(&guild_id.0) {
 		let queue = &node.queue;
 		let queue_len = queue.len();
 
@@ -912,7 +927,6 @@ pub async fn queue(ctx: PoiseContext<'_>) -> Result<(), Error> {
 			something_in_queue = true;
 
 			let global_queued_count = {
-				let guild_id = ctx.guild().unwrap().id;
 				let mut hash_map = ctx.data().queued_count.lock().unwrap();
 				*hash_map.entry(guild_id).or_default()
 			};

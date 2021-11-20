@@ -5,6 +5,7 @@
 #![warn(
 	clippy::complexity,
 	clippy::correctness,
+	clippy::dbg_macro,
 	clippy::perf,
 	clippy::style,
 	clippy::suspicious,
