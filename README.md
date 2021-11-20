@@ -13,7 +13,15 @@ widespread use.
 - [Poise](https://github.com/kangalioo/poise)
 - [Serenity](https://github.com/serenity-rs/serenity)
 - [Songbird](https://github.com/serenity-rs/songbird)
-- [Lavalink](https://github.com/freyacodes/Lavalink) (with the [Lavalink-rs](https://gitlab.com/vicky5124/lavalink-rs) Rust wrapper).
+- [Lavalink](https://github.com/freyacodes/Lavalink) (with the [lavalink-rs](https://gitlab.com/vicky5124/lavalink-rs) Rust wrapper).
+- [SponsorBlock](https://sponsor.ajay.app/) (with my [sponsor-block-rs](https://github.com/zedseven/sponsor-block-rs) Rust wrapper).
+
+## SponsorBlock Integration
+While playing videos from YouTube, the bot will automatically skip sponsored segments,
+intros and outros, non-music sections in music videos, and more.
+
+This uses the fantastic [SponsorBlock](https://sponsor.ajay.app/) service, which is run on curated user-submitted
+timestamps.
 
 ## Dice Rolling
 Parses the roll expression into [Reverse Polish Notation](https://en.wikipedia.org/wiki/Reverse_Polish_notation),
