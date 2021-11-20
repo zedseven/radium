@@ -27,7 +27,11 @@ const MAX_FIELD_VALUE: usize = 1024;
 ///
 /// You can do whatever math you want with the dice values, or even do pure math
 /// with no dice involved. (eg. `/roll (2d20b + 1d8) ^ 2 / 3`)
-#[command(prefix_command, slash_command, aliases("eval", "evaluate"))]
+#[command(
+	prefix_command,
+	slash_command,
+	aliases("eval", "evaluate", "calc", "calculate", "r")
+)]
 pub async fn roll(
 	ctx: PoiseContext<'_>,
 	#[rest]
