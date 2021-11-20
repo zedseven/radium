@@ -345,12 +345,16 @@ pub async fn play(
 						let mut skip_timecodes = segments
 							.iter()
 							.filter(|s| {
-								// Because some video durations are 0 (the segment was added before
-								// video durations were recorded)
-								let invalid_video_duration = s.video_duration_on_submission == 0.0;
-								invalid_video_duration
-									|| (s.video_duration_on_submission - track_duration).abs()
+								// Because some segments were added before video durations started
+								// being recorded
+								if let Some(video_duration_upon_submission) =
+									s.video_duration_on_submission
+								{
+									(video_duration_upon_submission - track_duration).abs()
 										<= DURATION_DISCARD_THRESHOLD
+								} else {
+									true
+								}
 							})
 							.filter_map(|s| match &s.segment {
 								ActionableSegment::Sponsor(t)

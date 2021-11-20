@@ -1076,7 +1076,7 @@ dependencies = [
 
 [[package]]
 name = "radium"
-version = "1.4.1"
+version = "1.4.2"
 dependencies = [
  "anyhow",
  "dotenv",
@@ -1459,9 +1459,9 @@ dependencies = [
 
 [[package]]
 name = "sponsor-block"
-version = "0.2.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce7682dedb0bdbf47ba1ce725a436851e1b75ba549f6bec5b8e25146756fda8e"
+checksum = "0eb97fee599d0846e08787e3b5aaf81d99f9b6b4c20135b5dae1d7cfe999ed86"
 dependencies = [
  "bitflags",
  "chrono",

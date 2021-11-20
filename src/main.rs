@@ -182,7 +182,9 @@ async fn main() -> Result<(), Error> {
 		})
 		.await
 		.with_context(|| "Failed to start the Lavalink client")?;
-	let sponsor_block_client = SponsorBlockClient::new(sponsor_block_user_id);
+	let sponsor_block_client = SponsorBlockClient::builder(sponsor_block_user_id)
+		.timeout(Duration::new(5, 0))
+		.build();
 
 	let songbird = Songbird::serenity();
 	let songbird_clone = songbird.clone(); // Required because the closure that uses it moves the value
