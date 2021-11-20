@@ -104,7 +104,8 @@ pub async fn roll(
 
 			if display_big_result {
 				if rolls_string.len() > MAX_FIELD_VALUE {
-					rolls_string = "*…clipped because there were too many values*".to_owned();
+					rolls_string =
+						"*\u{2026}clipped because there were too many values*".to_owned();
 				}
 				reply_embed(ctx, |e| {
 					if !slash_command {
@@ -420,7 +421,7 @@ fn evaluate_roll_command(rpn: Vec<Evaluable>) -> Option<(f64, Vec<Vec<u32>>)> {
 					OperatorType::Divide => left / right,
 					OperatorType::Add => left + right,
 					OperatorType::Subtract => left - right,
-					_ => {
+					OperatorType::ParenthesisLeft | OperatorType::ParenthesisRight => {
 						return None;
 					}
 				};

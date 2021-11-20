@@ -22,7 +22,7 @@ use crate::{
 pub async fn register(ctx: PoisePrefixContext<'_>, #[flag] local: bool) -> Result<(), Error> {
 	register_application_commands(PoiseContext::Prefix(ctx), !local)
 		.await
-		.with_context(|| "Failed to register slash commands".to_owned())?;
+		.with_context(|| "failed to register slash commands".to_owned())?;
 	Ok(())
 }
 
@@ -65,7 +65,7 @@ pub async fn about(ctx: PoiseContext<'_>) -> Result<(), Error> {
 			.field("Source Link", SOURCE_LINK, false)
 			.field(
 				"Created",
-				format!("{}, because Groovy died. 🚱", CREATED_DATE),
+				format!("{}, because Groovy died. \u{1f6b1}", CREATED_DATE),
 				false,
 			)
 	})

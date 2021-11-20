@@ -11,7 +11,7 @@ use crate::SerenityContext;
 pub struct SerenityHandler;
 
 #[async_trait]
-#[allow(clippy::single_match)]
+#[allow(clippy::single_match, clippy::wildcard_enum_match_arm)]
 impl RawEventHandler for SerenityHandler {
 	async fn raw_event(&self, ctx: SerenityContext, event: Event) {
 		match event {

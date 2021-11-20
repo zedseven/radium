@@ -25,7 +25,7 @@ pub async fn reply<S: ToString>(
 ) -> Result<Option<ReplyHandle<'_>>, Error> {
 	send_reply(ctx, |m| m.embed(|e| e.colour(MAIN_COLOUR).description(msg)))
 		.await
-		.with_context(|| "Failed to send message")
+		.with_context(|| "failed to send message")
 }
 
 pub async fn reply_plain<S: ToString>(
@@ -34,7 +34,7 @@ pub async fn reply_plain<S: ToString>(
 ) -> Result<Option<ReplyHandle<'_>>, Error> {
 	send_reply(ctx, |m| m.content(msg.to_string()))
 		.await
-		.with_context(|| "Failed to send message")
+		.with_context(|| "failed to send message")
 }
 
 pub async fn reply_embed(
@@ -43,7 +43,7 @@ pub async fn reply_embed(
 ) -> Result<Option<ReplyHandle<'_>>, Error> {
 	send_reply(ctx, |m| m.embed(|e| embed(e.colour(MAIN_COLOUR))))
 		.await
-		.with_context(|| "Failed to send message")
+		.with_context(|| "failed to send message")
 }
 
 /// Escapes a string for use in Discord, escaping all Markdown characters.
@@ -56,8 +56,8 @@ pub fn escape_str(s: &str) -> String {
 	}
 	ESCAPE_REGEX
 		.replace_all(s, r"\$0")
-		.replace('[', "⁅")
-		.replace(']', "⁆")
+		.replace('[', "\u{2045}")
+		.replace(']', "\u{2046}")
 }
 
 pub fn push_chopped_str(base: &mut String, new_str: &str, max_len: usize) {

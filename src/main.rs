@@ -5,13 +5,21 @@
 #![warn(
 	clippy::complexity,
 	clippy::correctness,
-	clippy::dbg_macro,
+	clippy::pedantic,
 	clippy::perf,
 	clippy::style,
 	clippy::suspicious,
-	clippy::pedantic,
+	clippy::clone_on_ref_ptr,
+	clippy::dbg_macro,
+	clippy::decimal_literal_representation,
+	clippy::exit,
 	clippy::filetype_is_file,
-	clippy::str_to_string
+	clippy::if_then_some_else_none,
+	clippy::non_ascii_literal,
+	clippy::self_named_module_files,
+	clippy::str_to_string,
+	clippy::undocumented_unsafe_blocks,
+	clippy::wildcard_enum_match_arm
 )]
 #![allow(
 	clippy::cast_possible_truncation,
@@ -102,17 +110,17 @@ async fn main() -> Result<(), Error> {
 	// Prepare basic bot information
 	let token = var(DISCORD_TOKEN_VAR).with_context(|| {
 		format!(
-			"Expected the discord token in the environment variable {}",
+			"expected the discord token in the environment variable {}",
 			DISCORD_TOKEN_VAR
 		)
 	})?;
 	let app_id = parse_token(&token)
-		.with_context(|| "Token is invalid".to_owned())?
+		.with_context(|| "token is invalid".to_owned())?
 		.bot_user_id;
 
 	let sponsor_block_user_id = var(SPONSOR_BLOCK_USER_ID_VAR).with_context(|| {
 		format!(
-			"Expected the SponsorBlock user ID in the environment variable {}",
+			"expected the SponsorBlock user ID in the environment variable {}",
 			SPONSOR_BLOCK_USER_ID_VAR
 		)
 	})?;
@@ -121,7 +129,7 @@ async fn main() -> Result<(), Error> {
 	let owner_id = http
 		.get_current_application_info()
 		.await
-		.with_context(|| "Failed to get application info".to_owned())?
+		.with_context(|| "failed to get application info".to_owned())?
 		.owner
 		.id;
 
@@ -173,15 +181,15 @@ async fn main() -> Result<(), Error> {
 		.set_host(var(LAVALINK_HOST_VAR).unwrap_or_else(|_| LAVALINK_HOST_DEFAULT.to_owned()))
 		.set_password(var(LAVALINK_PASSWORD_VAR).with_context(|| {
 			format!(
-				"Expected the Lavalink password in the environment variable {}",
+				"expected the Lavalink password in the environment variable {}",
 				LAVALINK_PASSWORD_VAR
 			)
 		})?)
 		.build(LavalinkHandler {
-			data: pre_init_data_arc.clone(),
+			data: Arc::clone(&pre_init_data_arc),
 		})
 		.await
-		.with_context(|| "Failed to start the Lavalink client")?;
+		.with_context(|| "failed to start the Lavalink client")?;
 	let sponsor_block_client = SponsorBlockClient::builder(sponsor_block_user_id)
 		.timeout(Duration::new(5, 0))
 		.build();
@@ -198,7 +206,7 @@ async fn main() -> Result<(), Error> {
 	}
 
 	let songbird = Songbird::serenity();
-	let songbird_clone = songbird.clone(); // Required because the closure that uses it moves the value
+	let songbird_clone = Arc::clone(&songbird); // Required because the closure that uses it moves the value
 
 	let data = Arc::new(Data {
 		songbird: songbird_clone,
@@ -210,7 +218,7 @@ async fn main() -> Result<(), Error> {
 	// Set the Data Arc that was given to the LavalinkHandler
 	{
 		let mut data_guard = pre_init_data_arc.lock().unwrap();
-		*data_guard = Some(data.clone());
+		*data_guard = Some(Arc::clone(&data));
 	}
 
 	Framework::build()
@@ -224,10 +232,10 @@ async fn main() -> Result<(), Error> {
 		.user_data_setup(move |_ctx, _ready, _framework| Box::pin(async move { Ok(data) }))
 		.build()
 		.await
-		.with_context(|| "Failed to build the bot framework")?
+		.with_context(|| "failed to build the bot framework")?
 		.start()
 		.await
-		.with_context(|| "Failed to start up")?;
+		.with_context(|| "failed to start up")?;
 
 	Ok(())
 }

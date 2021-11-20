@@ -40,7 +40,7 @@ const DESCRIPTION_LENGTH_CUTOFF: usize = MAX_DESCRIPTION_LENGTH - 512;
 const MAX_LIST_ENTRY_LENGTH: usize = 60;
 const MAX_SINGLE_ENTRY_LENGTH: usize = 40;
 const UNKNOWN_TITLE: &str = "Unknown title";
-const LIVE_INDICATOR: &str = "🔴 **LIVE**";
+const LIVE_INDICATOR: &str = "\u{1f534} **LIVE**";
 
 // Functions
 async fn join_internal<G, C>(
@@ -257,13 +257,13 @@ pub async fn play(
 					let mut new_info = old_info.clone();
 					new_info.title = Url::parse(old_info.uri.as_str())
 						.expect(
-							"Unable to parse track info URI when it should have been guaranteed \
+							"unable to parse track info URI when it should have been guaranteed \
 							 to be valid",
 						)
 						.path_segments()
-						.expect("Unable to parse URI as a proper path")
+						.expect("unable to parse URI as a proper path")
 						.last()
-						.expect("Unable to find the last path segment of URI")
+						.expect("unable to find the last path segment of URI")
 						.to_owned();
 					Some(new_info)
 				}
@@ -325,7 +325,7 @@ pub async fn play(
 				}
 
 				let parsed_uri = Url::parse(&info.uri).expect(
-					"Unable to parse track info URI when it should have been guaranteed to be \
+					"unable to parse track info URI when it should have been guaranteed to be \
 					 valid",
 				);
 
@@ -368,7 +368,9 @@ pub async fn play(
 									is_at_start: false,
 									is_at_end: false,
 								}),
-								_ => None,
+								ActionableSegment::Highlight(_)
+								| ActionableSegment::PreviewRecap(_)
+								| ActionableSegment::FillerTangent(_) => None,
 							})
 							.collect::<Vec<_>>();
 						// Ensure the segments are ordered by their time in the content
@@ -502,7 +504,7 @@ pub async fn play(
 			if i < queueable_tracks_len - 1 {
 				desc.push('\n');
 				if desc.len() > DESCRIPTION_LENGTH_CUTOFF {
-					desc.push_str("*…the rest has been clipped*");
+					desc.push_str("*\u{2026}the rest has been clipped*");
 					break;
 				}
 			}
@@ -533,9 +535,9 @@ fn get_youtube_video_id(uri: &Url) -> Option<String> {
 		} else if host.ends_with("youtu.be") {
 			Some(
 				uri.path_segments()
-					.expect("Unable to parse URI as a proper path")
+					.expect("unable to parse URI as a proper path")
 					.last()
-					.expect("Unable to find the last path segment of URI")
+					.expect("unable to find the last path segment of URI")
 					.to_owned(),
 			)
 		} else {
@@ -572,7 +574,7 @@ pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 			lava_client
 				.stop(guild_id.0)
 				.await
-				.with_context(|| "Failed to stop playback of the current track".to_owned())?;
+				.with_context(|| "failed to stop playback of the current track".to_owned())?;
 		}
 		reply(
 			ctx,
@@ -775,7 +777,7 @@ pub async fn clear(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	lava_client
 		.stop(guild_id.0)
 		.await
-		.with_context(|| "Failed to stop playback of the current track".to_owned())?;
+		.with_context(|| "failed to stop playback of the current track".to_owned())?;
 	reply(ctx, "The queue is now empty.").await?;
 
 	{
@@ -876,7 +878,7 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 						UserId(
 							now_playing
 								.requester
-								.expect("Expected a requester associated with a playing track")
+								.expect("expected a requester associated with a playing track")
 								.0,
 						)
 						.mention(),
@@ -948,7 +950,7 @@ pub async fn queue(ctx: PoiseContext<'_>) -> Result<(), Error> {
 				if i < queue_len - 1 {
 					desc.push('\n');
 					if desc.len() > DESCRIPTION_LENGTH_CUTOFF {
-						desc.push_str("*…the rest has been clipped*");
+						desc.push_str("*\u{2026}the rest has been clipped*");
 						break;
 					}
 				}
