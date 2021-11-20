@@ -185,6 +185,17 @@ async fn main() -> Result<(), Error> {
 	let sponsor_block_client = SponsorBlockClient::builder(sponsor_block_user_id)
 		.timeout(Duration::new(5, 0))
 		.build();
+	// Query the SponsorBlock API for the revision number and to test if it's
+	// operational
+	match sponsor_block_client
+		.fetch_api_status()
+		.await
+		.ok()
+		.map(|api_status| api_status.commit)
+	{
+		Some(commit) => println!("SponsorBlock API Revision: {}", commit),
+		None => println!("SponsorBlock API Revision: Unknown"),
+	}
 
 	let songbird = Songbird::serenity();
 	let songbird_clone = songbird.clone(); // Required because the closure that uses it moves the value
