@@ -34,7 +34,7 @@ async fn on_ready(ctx: SerenityContext, ready: Ready) {
 			.id()
 			.to_partial_guild(&ctx.http)
 			.await
-			.unwrap_or_else(|_| panic!("Unable to get guild with id {}", guild.id()));
+			.unwrap_or_else(|_| panic!("unable to get guild with id {}", guild.id()));
 		println!("{} - {}", guild.id().0, guild_data.name);
 	}
 }
