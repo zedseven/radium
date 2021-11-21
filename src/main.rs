@@ -81,6 +81,7 @@ const LAVALINK_HOST_VAR: &str = "LAVALINK_HOST";
 const LAVALINK_PASSWORD_VAR: &str = "LAVALINK_PASSWORD";
 const LAVALINK_HOST_DEFAULT: &str = "127.0.0.1";
 const SPONSOR_BLOCK_USER_ID_VAR: &str = "SPONSOR_BLOCK_USER_ID";
+const DISABLE_CLI_COLOURS_VAR: &str = "DISABLE_CLI_COLOURS";
 
 // Definitions
 pub type DataArc = Arc<Data>;
@@ -100,8 +101,15 @@ pub struct Data {
 /// Entry point.
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+	// Load environment variables
+	dotenv().ok();
+
 	// Terminal Colouring Stuff
-	Paint::enable_windows_ascii();
+	if var(DISABLE_CLI_COLOURS_VAR).is_ok() {
+		Paint::disable();
+	} else {
+		Paint::enable_windows_ascii();
+	}
 
 	// Header
 	println!(
@@ -113,9 +121,6 @@ async fn main() -> Result<(), Error> {
 			Paint::green("\u{1f4fb}")
 		))
 	);
-
-	// Load environment variables
-	dotenv().ok();
 
 	// Prepare basic bot information
 	let token = var(DISCORD_TOKEN_VAR).with_context(|| {
