@@ -273,8 +273,8 @@ pub async fn play(
 	}
 
 	// Queue the tracks up
+	let mut new_first_track_duration = None;
 	for track in &queueable_tracks {
-		let mut new_track_duration = None;
 		let mut new_start_time = None;
 
 		// YouTube SponsorBlock integration
@@ -307,9 +307,9 @@ pub async fn play(
 			}
 
 			if let Some(info) = &track.info {
-				const SEGMENT_COMBINE_THRESHOLD: f32 = 1.25;
-				const SEGMENT_LENGTH_THRESHOLD: f32 = 0.5;
-				const DURATION_DISCARD_THRESHOLD: f32 = 1.0;
+				const SEGMENT_COMBINE_THRESHOLD: f32 = 0.35; // The maximum distance between two segments to combine
+				const SEGMENT_LENGTH_THRESHOLD: f32 = 0.2; // The minimum length a segment should be
+				const DURATION_DISCARD_THRESHOLD: f32 = 0.25; // The maximum difference from the submission video length to accept
 
 				// No point if it's a stream
 				if !info.is_seekable {
@@ -389,7 +389,7 @@ pub async fn play(
 							.collect::<Vec<_>>();
 
 						// Store the new duration, without the skipped segments
-						new_track_duration = Some(
+						new_first_track_duration = Some(
 							info.length
 								- (skip_timecodes.iter().map(|t| t.end - t.start).sum::<f32>()
 									* MILLIS_PER_SECOND_F32) as u64,
@@ -470,6 +470,12 @@ pub async fn play(
 				track_info.uri,
 				if track_info.is_stream {
 					LIVE_INDICATOR.to_owned()
+				} else if let Some(new_track_duration) = new_first_track_duration {
+					format!(
+						"{} ({})",
+						display_timecode(track_info.length),
+						display_timecode(new_track_duration)
+					)
 				} else {
 					display_timecode(track_info.length)
 				}
@@ -812,14 +818,25 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		}
 		ret
 	}
-	fn display_segments(segments: &[SkipSegment]) -> String {
+	fn display_segments(segments: &[SkipSegment], length: u64) -> String {
 		let mut ret = String::new();
 		for segment in segments {
+			// The is_at_start and is_at_end checks are so that there's a unified display,
+			// since floating-point imprecision and track length rounding seem to often lead
+			// to the segment time not exactly matching the actual value when displayed
 			ret.push_str(
 				format!(
 					"- {} - {}",
-					display_timecode_f32(segment.start),
-					display_timecode_f32(segment.end)
+					if segment.is_at_start {
+						display_timecode(0)
+					} else {
+						display_timecode_f32(segment.start)
+					},
+					if segment.is_at_end {
+						display_timecode(length)
+					} else {
+						display_timecode_f32(segment.end)
+					}
 				)
 				.as_str(),
 			);
@@ -883,7 +900,11 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 						false,
 					);
 				if let Some(Some(segments)) = track_segments {
-					e.field("Skip Segments:", display_segments(&segments), false);
+					e.field(
+						"Skip Segments:",
+						display_segments(&segments, track_info.length),
+						false,
+					);
 				}
 				e
 			})

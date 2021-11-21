@@ -96,7 +96,8 @@ impl LavalinkEventHandler for LavalinkHandler {
 						}
 
 						// Seek
-						// We discard the error because there's nothing to be done about it here
+						// We discard the potential error because there's nothing to be done about
+						// it here
 						client
 							.seek(event.guild_id, Duration::from_secs_f32(next_segment.end))
 							.await
