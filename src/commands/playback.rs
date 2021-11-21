@@ -276,7 +276,6 @@ pub async fn play(
 	for track in &queueable_tracks {
 		let mut new_track_duration = None;
 		let mut new_start_time = None;
-		let mut new_end_time = None;
 
 		// YouTube SponsorBlock integration
 		let track_segments_identifier_opt = track.info.as_ref().map(|i| &i.identifier);
@@ -298,15 +297,8 @@ pub async fn play(
 					.get(track_segments_identifier)
 				{
 					// Load the special start and end times if necessary
-					let segments_len = segments.len();
-					if segments_len > 0 {
-						if segments[0].is_at_start {
-							new_start_time = Some(Duration::from_secs_f32(segments[0].end));
-						}
-						if segments[segments_len - 1].is_at_end {
-							new_end_time =
-								Some(Duration::from_secs_f32(segments[segments_len - 1].start));
-						}
+					if !segments.is_empty() && segments[0].is_at_start {
+						new_start_time = Some(Duration::from_secs_f32(segments[0].end));
 					}
 					// Break
 					cache_track_with_none = false;
@@ -413,15 +405,6 @@ pub async fn play(
 								new_start_time =
 									Some(Duration::from_secs_f32(skip_timecodes[0].end));
 							}
-							// Set the end time for the track if there's a segment right at the end
-							if (track_duration - skip_timecodes[skip_timecodes_len - 1].end).abs()
-								<= SEGMENT_COMBINE_THRESHOLD
-							{
-								skip_timecodes[skip_timecodes_len - 1].is_at_end = true;
-								new_end_time = Some(Duration::from_secs_f32(
-									skip_timecodes[skip_timecodes_len - 1].start,
-								));
-							}
 						}
 
 						// Cache the segments if there's segments to cache
@@ -455,9 +438,6 @@ pub async fn play(
 		queueable.requester(ctx.author().id.0);
 		if let Some(start_time) = new_start_time {
 			queueable.start_time(start_time);
-		}
-		if let Some(end_time) = new_end_time {
-			queueable.finish_time(end_time);
 		}
 		if let Err(e) = queueable.queue().await {
 			reply(ctx, "Failed to queue up query result.").await?;

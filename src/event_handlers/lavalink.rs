@@ -6,7 +6,7 @@ use std::{
 
 use lavalink_rs::{
 	gateway::LavalinkEventHandler,
-	model::{GuildId, PlayerUpdate, TrackFinish, TrackStart, TrackStuck},
+	model::{GuildId, PlayerUpdate, TrackStart, TrackStuck},
 	LavalinkClient,
 };
 use poise::serenity::async_trait;
@@ -29,10 +29,6 @@ impl LavalinkEventHandler for LavalinkHandler {
 			.expect("Unable to decode event track string")
 			.identifier;
 		update_segment_data(&self.data, event.guild_id, Some(identifier));
-	}
-
-	async fn track_finish(&self, _client: LavalinkClient, event: TrackFinish) {
-		dbg!(&event);
 	}
 
 	// During video playback, check regularly if we're close to a segment to skip
@@ -59,7 +55,7 @@ impl LavalinkEventHandler for LavalinkHandler {
 				for segment in &guild_segments.segments {
 					// Segments at the start and end are handled by Lavalink itself -
 					// don't touch them. We also skip segments that have already passed.
-					if segment.is_at_an_end() || segment.end - SEGMENT_END_EPSILON <= position_f32 {
+					if segment.is_at_start || segment.end - SEGMENT_END_EPSILON <= position_f32 {
 						continue;
 					}
 					next_segment_opt = Some(segment);

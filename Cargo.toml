@@ -1,6 +1,6 @@
 [package]
 name = "radium"
-version = "1.4.4"
+version = "1.5.0"
 authors = ["Zacchary Dempsey-Plante <zacc@ztdp.ca>"]
 edition = "2021"
 license = "GPL-3.0-or-later"
