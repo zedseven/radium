@@ -61,10 +61,10 @@ pub async fn about(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	reply_embed(ctx, |e| {
 		e.title("Radium")
 			.description(format!("The Radium Radio bot, `v{}`.", PROGRAM_VERSION))
-			.field("Authour", CREATOR_ID.mention(), false)
-			.field("Source Link", SOURCE_LINK, false)
+			.field("Authour:", CREATOR_ID.mention(), false)
+			.field("Source Link:", SOURCE_LINK, false)
 			.field(
-				"Created",
+				"Created:",
 				format!("{}, because Groovy died. \u{1f6b1}", CREATED_DATE),
 				false,
 			)
