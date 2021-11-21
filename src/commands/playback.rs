@@ -782,8 +782,8 @@ pub async fn clear(ctx: PoiseContext<'_>) -> Result<(), Error> {
 )]
 pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	fn create_progress_display(length: Option<u64>, position: u64) -> String {
-		const EMPTY_BLOCK: char = '▱';
-		const FULL_BLOCK: char = '▰';
+		const EMPTY_BLOCK: char = '\u{25b1}';
+		const FULL_BLOCK: char = '\u{25b0}';
 		const PROGRESS_BAR_SIZE: u64 = 10;
 
 		let mut ret = String::new();
