@@ -66,10 +66,11 @@ use poise::{
 };
 use songbird::{SerenityInit, Songbird};
 use sponsor_block::Client as SponsorBlockClient;
+use yansi::Paint;
 
 use crate::{
 	commands::*,
-	constants::{PREFIX, PROGRAM_VERSION},
+	constants::{HEADER_STYLE, PREFIX, PROGRAM_VERSION},
 	event_handlers::{LavalinkHandler, SerenityHandler},
 	segments::SegmentData,
 };
@@ -99,9 +100,18 @@ pub struct Data {
 /// Entry point.
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+	// Terminal Colouring Stuff
+	Paint::enable_windows_ascii();
+
+	// Header
 	println!(
-		"\u{2622}\u{fe0f} --- Radium v{} --- \u{1f4fb}",
-		PROGRAM_VERSION
+		"{}",
+		HEADER_STYLE.paint(format!(
+			"{} --- {} --- {}",
+			Paint::yellow("\u{2622}\u{fe0f}"),
+			Paint::red(format!("Radium v{}", PROGRAM_VERSION)),
+			Paint::green("\u{1f4fb}")
+		))
 	);
 
 	// Load environment variables
@@ -133,8 +143,8 @@ async fn main() -> Result<(), Error> {
 		.owner
 		.id;
 
-	println!("Application ID: {}", app_id);
-	println!("Owner ID: {}", owner_id);
+	println!("{}   {}", HEADER_STYLE.paint("Application ID:"), app_id);
+	println!("{}         {}", HEADER_STYLE.paint("Owner ID:"), owner_id);
 
 	let mut owners = HashSet::new();
 	owners.insert(owner_id);
@@ -195,14 +205,15 @@ async fn main() -> Result<(), Error> {
 		.build();
 	// Query the SponsorBlock API for the revision number and to test if it's
 	// operational
+	print!("{} ", HEADER_STYLE.paint("SponsorBlock API:"));
 	match sponsor_block_client
 		.fetch_api_status()
 		.await
 		.ok()
 		.map(|api_status| api_status.commit)
 	{
-		Some(commit) => println!("SponsorBlock API Revision: {}", commit),
-		None => println!("SponsorBlock API Revision: Unknown"),
+		Some(commit) => println!("{}", commit),
+		None => println!("Unknown"),
 	}
 
 	let songbird = Songbird::serenity();

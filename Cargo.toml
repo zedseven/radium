@@ -1,6 +1,6 @@
 [package]
 name = "radium"
-version = "1.6.0"
+version = "1.6.1"
 authors = ["Zacchary Dempsey-Plante <zacc@ztdp.ca>"]
 edition = "2021"
 license = "GPL-3.0-or-later"
@@ -19,6 +19,7 @@ regex = "1.5"
 sponsor-block = "0.6"
 tokio = { version = "1.10", features = ["macros", "rt-multi-thread"] }
 url = "2.2"
+yansi = "0.5"
 
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity"

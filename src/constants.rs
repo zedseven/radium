@@ -2,8 +2,10 @@
 #![allow(clippy::unreadable_literal)]
 
 // Uses
+use lazy_static::lazy_static;
 use poise::serenity::{model::id::UserId, utils::Colour};
 use sponsor_block::AcceptedCategories;
+use yansi::{Color, Style};
 
 // Constants
 pub const PROGRAM_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -30,3 +32,10 @@ pub const MINUTES_PER_HOUR_F32: f32 = MINUTES_PER_HOUR as f32;
 pub const MILLIS_PER_MINUTE_F32: f32 = MILLIS_PER_MINUTE as f32;
 pub const MILLIS_PER_HOUR_F32: f32 = MILLIS_PER_HOUR as f32;
 pub const SECONDS_PER_HOUR_F32: f32 = SECONDS_PER_HOUR as f32;
+
+// Style Constants
+lazy_static! {
+	pub static ref HEADER_STYLE: Style = Style::new(Color::Cyan).bold().wrap();
+	pub static ref OKAY_STYLE: Style = Style::new(Color::Green).bold();
+	pub static ref ERROR_STYLE: Style = Style::new(Color::Red).bold();
+}
