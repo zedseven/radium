@@ -3,7 +3,7 @@
 
 [![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE.md)
 
-A simple music & dice bot made for personal use.
+A music & dice bot made for personal use.
 
 I made this for use by my friends and I on [Discord](https://discord.com/).
 You're welcome to use it if you want to, but it isn't intended for
@@ -38,7 +38,7 @@ Obviously this is beyond what a typical game would ever really require, but it w
 to implement.
 
 The format for dice rolls is `<count>d<size>`.
-You can also do (dis)advantage with either [b]est or [w]orst after the roll,
+You can also do (dis)advantage with either [**b**]est or [**w**]orst after the roll,
 followed by the number of best/worst rolls you want to keep.
 
 For example:
