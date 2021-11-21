@@ -405,6 +405,12 @@ pub async fn play(
 								new_start_time =
 									Some(Duration::from_secs_f32(skip_timecodes[0].end));
 							}
+							// Set the end time for the track if there's a segment right at the end
+							if (track_duration - skip_timecodes[skip_timecodes_len - 1].end).abs()
+								<= SEGMENT_COMBINE_THRESHOLD
+							{
+								skip_timecodes[skip_timecodes_len - 1].is_at_end = true;
+							}
 						}
 
 						// Cache the segments if there's segments to cache
