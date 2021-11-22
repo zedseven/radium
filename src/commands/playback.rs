@@ -20,7 +20,7 @@ use sponsor_block::ActionableSegment;
 use url::Url;
 
 use crate::{
-	constants::{ACCEPTED_CATEGORIES, MILLIS_PER_SECOND_F32},
+	constants::{ACCEPTED_CATEGORIES, MILLIS_PER_SECOND, MILLIS_PER_SECOND_F32},
 	segments::SkipSegment,
 	util::{
 		chop_str,
@@ -274,7 +274,7 @@ pub async fn play(
 
 	// Queue the tracks up
 	let mut new_first_track_duration = None;
-	for track in &queueable_tracks {
+	for (index, track) in queueable_tracks.iter().enumerate() {
 		let mut new_start_time = None;
 
 		// YouTube SponsorBlock integration
@@ -308,8 +308,8 @@ pub async fn play(
 
 			if let Some(info) = &track.info {
 				const SEGMENT_COMBINE_THRESHOLD: f32 = 0.35; // The maximum distance between two segments to combine
-				const SEGMENT_LENGTH_THRESHOLD: f32 = 0.2; // The minimum length a segment should be
-				const DURATION_DISCARD_THRESHOLD: f32 = 0.25; // The maximum difference from the submission video length to accept
+				const SEGMENT_LENGTH_THRESHOLD: f32 = 0.5; // The minimum length a segment should be
+				const DURATION_DISCARD_THRESHOLD: f32 = 1.25; // The maximum difference from the submission video length to accept
 
 				// No point if it's a stream
 				if !info.is_seekable {
@@ -330,7 +330,6 @@ pub async fn play(
 					{
 						// Calculate the track duration
 						let track_duration = info.length as f32 / MILLIS_PER_SECOND_F32;
-
 						// Get the pertinent information and filter out segments that may be
 						// incorrect (submitted before some edit to the video length that
 						// invalidates the timecodes)
@@ -388,16 +387,23 @@ pub async fn play(
 							.filter(|t| t.end - t.start >= SEGMENT_LENGTH_THRESHOLD)
 							.collect::<Vec<_>>();
 
-						// Store the new duration, without the skipped segments
-						new_first_track_duration = Some(
-							info.length
-								- (skip_timecodes.iter().map(|t| t.end - t.start).sum::<f32>()
-									* MILLIS_PER_SECOND_F32) as u64,
-						);
-
-						// Start & end times
+						// Final processing
 						skip_timecodes_len = skip_timecodes.len();
 						if skip_timecodes_len > 0 {
+							// Store the new duration, without the skipped segments, for the first
+							// track
+							if index == 0 {
+								let new_track_duration = info.length
+									- (skip_timecodes.iter().map(|t| t.end - t.start).sum::<f32>()
+										* MILLIS_PER_SECOND_F32) as u64;
+								// The track durations are displayed with 1s precision, so there's
+								// no point in setting the new track duration if it's a difference
+								// of <1s
+								if new_track_duration <= info.length - MILLIS_PER_SECOND {
+									new_first_track_duration = Some(new_track_duration);
+								}
+							}
+
 							// Set the start time for the track if there's a segment right at the
 							// beginning
 							if skip_timecodes[0].start <= SEGMENT_COMBINE_THRESHOLD {
@@ -405,7 +411,7 @@ pub async fn play(
 								new_start_time =
 									Some(Duration::from_secs_f32(skip_timecodes[0].end));
 							}
-							// Set the end time for the track if there's a segment right at the end
+							// Set the end segment's is_at_end value if it's at the very end
 							if (track_duration - skip_timecodes[skip_timecodes_len - 1].end).abs()
 								<= SEGMENT_COMBINE_THRESHOLD
 							{
