@@ -49,7 +49,7 @@ pub async fn roll(
 	};
 
 	if let Some(rpn) = parse_roll_command(command_slice) {
-		if let Some((result, dice_rolls)) = evaluate_roll_command(rpn) {
+		if let Some((result, dice_rolls)) = evaluate_roll_command(&rpn) {
 			// Display preparation
 			let mut rolls_string = display_rolls(&dice_rolls);
 
@@ -128,6 +128,92 @@ pub async fn roll(
 			reply(ctx, "Invalid command.").await?;
 			return Ok(());
 		}
+	} else {
+		reply(ctx, "Invalid command.").await?;
+		return Ok(());
+	}
+
+	Ok(())
+}
+
+/// Batch roll the same command multiple times.
+#[command(
+	prefix_command,
+	slash_command,
+	category = "Chance",
+	rename = "batchroll",
+	aliases("br")
+)]
+pub async fn batch_roll(
+	ctx: PoiseContext<'_>,
+	#[description = "The number of times to execute the command."] count: u32,
+	#[rest]
+	#[description = "The dice to roll. Follow the command with `!` to annotate what the roll is \
+	                 for."]
+	command: String,
+) -> Result<(), Error> {
+	if count < 2 {
+		reply(ctx, "Invalid command.").await?;
+		return Ok(());
+	}
+
+	let slash_command = is_application_context(&ctx);
+
+	let annotation_index = command.find(ANNOTATION_CHAR);
+	let command_slice = match annotation_index {
+		Some(index) => command[0..index].trim(),
+		None => command.trim(),
+	};
+
+	if let Some(rpn) = parse_roll_command(command_slice) {
+		// Execute the rolls
+		let mut roll_results = Vec::new();
+		for _ in 0..count {
+			if let Some((result, _)) = evaluate_roll_command(&rpn) {
+				roll_results.push(result);
+			} else {
+				reply(ctx, "Invalid command.").await?;
+				return Ok(());
+			}
+		}
+
+		// Annotation parsing
+		let annotation = escape_str(if let Some(index) = annotation_index {
+			command[(index + 1)..].trim()
+		} else {
+			""
+		});
+
+		// Prepare the results list
+		let number_width = count.log10() as usize + 1;
+		let mut result_display = String::new();
+		for (i, result) in roll_results.iter().enumerate() {
+			result_display.push_str(format!("{:>1$}: ", i + 1, number_width).as_str());
+			result_display.push_str(
+				format!("{:.2}", result)
+					.trim_end_matches('0')
+					.trim_end_matches('.'),
+			);
+			if i < count as usize - 1 {
+				result_display.push('\n');
+			}
+		}
+
+		// Escape the command string
+		let command_slice_escaped = escape_str(command_slice);
+
+		reply_embed(ctx, |e| {
+			if !slash_command {
+				e.field("For:", ctx.author().mention(), true);
+			}
+			e.field("Count:", format!("`{}`", count), true);
+			if !annotation.is_empty() {
+				e.field("Reason:", format!("`{}`", annotation), true);
+			}
+			e.field("Command:", format!("`{}`", command_slice_escaped), false)
+				.field("Results:", format!("```{}```", result_display), false)
+		})
+		.await?;
 	} else {
 		reply(ctx, "Invalid command.").await?;
 		return Ok(());
@@ -282,6 +368,55 @@ enum OperatorType {
 ///
 /// This is an implementation of the [Shunting-Yard Algorithm](https://en.wikipedia.org/wiki/Shunting-yard_algorithm).
 fn parse_roll_command(command: &str) -> Option<Vec<Evaluable>> {
+	/// Sub-function for converting token chars into their proper operators.
+	fn token_to_operator(token: char) -> Option<Operator> {
+		match token {
+			'^' => Some(Operator {
+				op: OperatorType::Exponent,
+				functional: true,
+				precedence: 4,
+				associates_left: false,
+			}),
+			'*' | '×' | 'x' => Some(Operator {
+				op: OperatorType::Multiply,
+				functional: true,
+				precedence: 3,
+				associates_left: true,
+			}),
+			'/' | '÷' => Some(Operator {
+				op: OperatorType::Divide,
+				functional: true,
+				precedence: 3,
+				associates_left: true,
+			}),
+			'+' => Some(Operator {
+				op: OperatorType::Add,
+				functional: true,
+				precedence: 2,
+				associates_left: true,
+			}),
+			'-' => Some(Operator {
+				op: OperatorType::Subtract,
+				functional: true,
+				precedence: 2,
+				associates_left: true,
+			}),
+			'(' => Some(Operator {
+				op: OperatorType::ParenthesisLeft,
+				functional: false,
+				precedence: 0,
+				associates_left: true,
+			}),
+			')' => Some(Operator {
+				op: OperatorType::ParenthesisRight,
+				functional: false,
+				precedence: 0,
+				associates_left: true,
+			}),
+			_ => None,
+		}
+	}
+
 	// Split the command into tokens. Whitespace-separated values and operators are
 	// individual tokens.
 	let tokens = command
@@ -369,7 +504,7 @@ fn parse_roll_command(command: &str) -> Option<Vec<Evaluable>> {
 }
 
 /// Evaluate the Reverse Polish Notation expression into final results.
-fn evaluate_roll_command(rpn: Vec<Evaluable>) -> Option<(f64, Vec<Vec<u32>>)> {
+fn evaluate_roll_command(rpn: &[Evaluable]) -> Option<(f64, Vec<Vec<u32>>)> {
 	let mut dice_rolls = Vec::new();
 	let mut stack = VecDeque::new();
 
@@ -381,7 +516,7 @@ fn evaluate_roll_command(rpn: Vec<Evaluable>) -> Option<(f64, Vec<Vec<u32>>)> {
 				stack.push_front(f64::from(value));
 			}
 			Evaluable::Num(value) => {
-				stack.push_front(value);
+				stack.push_front(*value);
 			}
 			Evaluable::Operator(op) => {
 				if stack.len() < 2 {
@@ -408,54 +543,6 @@ fn evaluate_roll_command(rpn: Vec<Evaluable>) -> Option<(f64, Vec<Vec<u32>>)> {
 	}
 
 	Some((stack.pop_front().unwrap(), dice_rolls))
-}
-
-fn token_to_operator(token: char) -> Option<Operator> {
-	match token {
-		'^' => Some(Operator {
-			op: OperatorType::Exponent,
-			functional: true,
-			precedence: 4,
-			associates_left: false,
-		}),
-		'*' | '×' | 'x' => Some(Operator {
-			op: OperatorType::Multiply,
-			functional: true,
-			precedence: 3,
-			associates_left: true,
-		}),
-		'/' | '÷' => Some(Operator {
-			op: OperatorType::Divide,
-			functional: true,
-			precedence: 3,
-			associates_left: true,
-		}),
-		'+' => Some(Operator {
-			op: OperatorType::Add,
-			functional: true,
-			precedence: 2,
-			associates_left: true,
-		}),
-		'-' => Some(Operator {
-			op: OperatorType::Subtract,
-			functional: true,
-			precedence: 2,
-			associates_left: true,
-		}),
-		'(' => Some(Operator {
-			op: OperatorType::ParenthesisLeft,
-			functional: false,
-			precedence: 0,
-			associates_left: true,
-		}),
-		')' => Some(Operator {
-			op: OperatorType::ParenthesisRight,
-			functional: false,
-			precedence: 0,
-			associates_left: true,
-		}),
-		_ => None,
-	}
 }
 
 fn display_rolls(dice_rolls: &[Vec<u32>]) -> String {

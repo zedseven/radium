@@ -82,6 +82,7 @@ const LAVALINK_PASSWORD_VAR: &str = "LAVALINK_PASSWORD";
 const LAVALINK_HOST_DEFAULT: &str = "127.0.0.1";
 const SPONSOR_BLOCK_USER_ID_VAR: &str = "SPONSOR_BLOCK_USER_ID";
 const DISABLE_CLI_COLOURS_VAR: &str = "DISABLE_CLI_COLOURS";
+const COMMIT_NUMBER_CHOP_LENGTH: usize = 8;
 
 // Definitions
 pub type DataArc = Arc<Data>;
@@ -186,6 +187,7 @@ async fn main() -> Result<(), Error> {
 	options.command(queue(), |f| f);
 	// Chance
 	options.command(roll(), |f| f);
+	options.command(batch_roll(), |f| f);
 	options.command(dice_jail(), |f| f);
 
 	// Start up the bot
@@ -219,7 +221,7 @@ async fn main() -> Result<(), Error> {
 		.ok()
 		.map(|api_status| api_status.commit)
 	{
-		Some(commit) => println!("{}", commit),
+		Some(commit) => println!("{}", &commit[..COMMIT_NUMBER_CHOP_LENGTH]),
 		None => println!("Unknown"),
 	}
 

@@ -36,5 +36,16 @@
 - Close Songbird connection on disconnect
 - Set status
 - Saved rolls for dice rolling (-sr?)
+  - `saveroll` command for saving a roll command
+  - Commands for querying/deleting saved rolls
+  - Executing a saved roll simply calls `parse_roll_command`
 - Dice rolling do lots of individual rolls at once (for DMs)
 - "New dice" command that does nothing
+- Persistent storage
+  - Probably SQLite with Diesel
+  - Store the following data:
+    - Previous status
+    - User-saved rolls
+      - Saved rolls should be saved to a user in a guild (so that if the bot is used in multiple DnD servers by the
+      same users, the rolls are separate for their characters)
+    - Queue(?)
