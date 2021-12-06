@@ -3,7 +3,7 @@ use anyhow::Context;
 use poise::{
 	builtins::{help as poise_help, register_application_commands, HelpResponseMode},
 	command,
-	serenity::model::misc::Mentionable,
+	serenity::model::{gateway::Activity, misc::Mentionable},
 };
 
 use crate::{
@@ -18,11 +18,38 @@ use crate::{
 ///
 /// Run with no arguments to register globally, run with argument "local" to
 /// register in-server.
-#[command(prefix_command, owners_only, hide_in_help)]
+#[command(prefix_command, owners_only, hide_in_help, category = "Utility")]
 pub async fn register(ctx: PoisePrefixContext<'_>, #[flag] local: bool) -> Result<(), Error> {
 	register_application_commands(PoiseContext::Prefix(ctx), !local)
 		.await
 		.with_context(|| "failed to register slash commands".to_owned())?;
+	Ok(())
+}
+
+/// Set the bot status.
+#[command(
+	prefix_command,
+	owners_only,
+	hide_in_help,
+	category = "Utility",
+	rename = "setstatus",
+	aliases("status")
+)]
+pub async fn set_status(
+	ctx: PoisePrefixContext<'_>,
+	r#type: String,
+	#[rest] status: String,
+) -> Result<(), Error> {
+	let activity = match r#type.to_lowercase().trim() {
+		"playing" | "play" | "p" => Activity::playing(status), // Playing ...
+		"listening" | "listen" | "l" => Activity::listening(status), // Listening to ...
+		"watching" | "watch" | "w" => Activity::watching(status), // Watching ...
+		"competing" | "compete" | "c" => Activity::competing(status), // Competing in ...
+		_ => return Ok(()),
+	};
+
+	ctx.discord.set_activity(activity).await;
+
 	Ok(())
 }
 
@@ -32,7 +59,13 @@ pub async fn register(ctx: PoisePrefixContext<'_>, #[flag] local: bool) -> Resul
 /// detailed description of what the command does, and how to use it.
 ///
 /// Of course, if you're seeing this, you already know you can do that.
-#[command(prefix_command, slash_command, track_edits, aliases("h"))]
+#[command(
+	prefix_command,
+	slash_command,
+	track_edits,
+	category = "Utility",
+	aliases("h")
+)]
 pub async fn help(
 	ctx: PoiseContext<'_>,
 	#[description = "A specific command to show help about."] command: Option<String>,
@@ -56,7 +89,7 @@ pub async fn help(
 /// Get basic information about Radium.
 ///
 /// There isn't much else to say - just use the command.
-#[command(prefix_command, slash_command)]
+#[command(prefix_command, slash_command, category = "Utility")]
 pub async fn about(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	reply_embed(ctx, |e| {
 		e.title("Radium")
@@ -80,7 +113,7 @@ pub async fn about(ctx: PoiseContext<'_>) -> Result<(), Error> {
 ///
 /// It's sticking around for posterity and as a quick way to test if the bot is
 /// operational.
-#[command(prefix_command, slash_command)]
+#[command(prefix_command, slash_command, category = "Utility")]
 pub async fn ping(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	reply(ctx, "Pong!").await?;
 	Ok(())

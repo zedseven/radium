@@ -3,7 +3,7 @@
   - Looks alright, but I really just threw it together, and it could be better
   - Maybe try flat shapes rather than line-work, as shapes are more readable at small resolutions (such as avatars)
 - Now playing update for new tracks
-  - I.e. when a new track starts playing, update the previous notification or post a new one with the track name and
+  - i.e. when a new track starts playing, update the previous notification or post a new one with the track name and
   duration
 - Shuffle (potentially with range specified)
 - `ping` latency
@@ -33,3 +33,8 @@
   - Filter out segments <5s long or something, since lavalink seeking takes a second
   - Probably shouldn't bother with previews/recaps and highlights
   - Maybe don't show a message when skipping, but show a readout of segments to skip on queueing a single track 
+- Close Songbird connection on disconnect
+- Set status
+- Saved rolls for dice rolling (-sr?)
+- Dice rolling do lots of individual rolls at once (for DMs)
+- "New dice" command that does nothing

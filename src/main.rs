@@ -169,6 +169,7 @@ async fn main() -> Result<(), Error> {
 	// Command Initialization
 	// Utility
 	options.command(register(), |f| f);
+	options.command(set_status(), |f| f);
 	options.command(help(), |f| f);
 	options.command(about(), |f| f);
 	options.command(ping(), |f| f);
@@ -185,6 +186,7 @@ async fn main() -> Result<(), Error> {
 	options.command(queue(), |f| f);
 	// Chance
 	options.command(roll(), |f| f);
+	options.command(dice_jail(), |f| f);
 
 	// Start up the bot
 

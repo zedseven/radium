@@ -30,6 +30,7 @@ const MAX_FIELD_VALUE: usize = 1024;
 #[command(
 	prefix_command,
 	slash_command,
+	category = "Chance",
 	aliases("eval", "evaluate", "calc", "calculate", "r")
 )]
 pub async fn roll(
@@ -50,36 +51,7 @@ pub async fn roll(
 	if let Some(rpn) = parse_roll_command(command_slice) {
 		if let Some((result, dice_rolls)) = evaluate_roll_command(rpn) {
 			// Display preparation
-			let mut rolls_string = String::new();
-			let rolls_count = dice_rolls.len();
-			if rolls_count > 0 {
-				rolls_string.push('`');
-				if rolls_count > 1 {
-					rolls_string.push('[');
-				}
-				for (i, dice_roll) in dice_rolls.iter().enumerate() {
-					if i > 0 {
-						rolls_string.push(' ');
-					}
-					let roll_dice_count = dice_roll.len();
-					if roll_dice_count > 1 {
-						rolls_string.push('[');
-					}
-					for (j, value) in dice_roll.iter().enumerate() {
-						if j > 0 {
-							rolls_string.push(' ');
-						}
-						rolls_string.push_str(value.to_string().as_str());
-					}
-					if roll_dice_count > 1 {
-						rolls_string.push(']');
-					}
-				}
-				if rolls_count > 1 {
-					rolls_string.push(']');
-				}
-				rolls_string.push('`');
-			}
+			let mut rolls_string = display_rolls(&dice_rolls);
 
 			// Annotation parsing
 			let annotation = escape_str(if let Some(index) = annotation_index {
@@ -95,6 +67,8 @@ pub async fn roll(
 
 			// Display the result with maximum 2 decimal places of precision, but strip
 			// off trailing '0's and '.'s so that normal rolls don't have decimals
+			// We don't use the &[char] pattern:
+			// If we did, numbers like `600.0` would become `6`
 			let result_display = format!("{:.2}", result)
 				.trim_end_matches('0')
 				.trim_end_matches('.')
@@ -482,4 +456,78 @@ fn token_to_operator(token: char) -> Option<Operator> {
 		}),
 		_ => None,
 	}
+}
+
+fn display_rolls(dice_rolls: &[Vec<u32>]) -> String {
+	let mut rolls_string = String::new();
+	let rolls_count = dice_rolls.len();
+	if rolls_count == 0 {
+		return rolls_string;
+	}
+	rolls_string.push('`');
+	if rolls_count > 1 {
+		rolls_string.push('[');
+	}
+	for (i, dice_roll) in dice_rolls.iter().enumerate() {
+		if i > 0 {
+			rolls_string.push(' ');
+		}
+		let roll_dice_count = dice_roll.len();
+		if roll_dice_count > 1 {
+			rolls_string.push('[');
+		}
+		for (j, value) in dice_roll.iter().enumerate() {
+			if j > 0 {
+				rolls_string.push(' ');
+			}
+			rolls_string.push_str(value.to_string().as_str());
+		}
+		if roll_dice_count > 1 {
+			rolls_string.push(']');
+		}
+	}
+	if rolls_count > 1 {
+		rolls_string.push(']');
+	}
+	rolls_string.push('`');
+
+	rolls_string
+}
+
+/// Put bad dice in dice jail and get new dice.
+#[command(
+	prefix_command,
+	slash_command,
+	category = "Chance",
+	rename = "dicejail",
+	aliases("newdice")
+)]
+pub async fn dice_jail(ctx: PoiseContext<'_>) -> Result<(), Error> {
+	const DICE_SIZE: u32 = 20;
+	const DICE_COUNT: u32 = 5;
+
+	let (rolls, _) = Dice {
+		size: DICE_SIZE,
+		count: DICE_COUNT,
+		modifier: None,
+	}
+	.eval();
+
+	reply_embed(ctx, |e| {
+		if !is_application_context(&ctx) {
+			e.field("Requested By:", ctx.author().mention(), true);
+		}
+		e.title("New Dice")
+			.description(
+				"The previous dice have been\nput in dice jail for now. \u{1f3b2}\u{26d3}\u{fe0f}",
+			)
+			.field(
+				format!("Sample Rolls ({}d{}):", DICE_COUNT, DICE_SIZE),
+				display_rolls(&[rolls]),
+				false,
+			)
+	})
+	.await?;
+
+	Ok(())
 }

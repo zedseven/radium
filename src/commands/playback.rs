@@ -72,7 +72,7 @@ fn authour_channel_id(guild: &Guild, authour_id: UserId) -> Option<ChannelId> {
 }
 
 /// Have Radium join the voice channel you're in.
-#[command(prefix_command, slash_command, aliases("j"))]
+#[command(prefix_command, slash_command, category = "Playback", aliases("j"))]
 pub async fn join(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild = if let Some(guild) = ctx.guild() {
 		guild
@@ -110,7 +110,7 @@ pub async fn join(ctx: PoiseContext<'_>) -> Result<(), Error> {
 }
 
 /// Have Radium leave the voice channel it's in, if any.
-#[command(prefix_command, slash_command, aliases("l"))]
+#[command(prefix_command, slash_command, category = "Playback", aliases("l"))]
 pub async fn leave(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild_id = if let Some(guild_id) = ctx.guild_id() {
 		guild_id
@@ -119,15 +119,15 @@ pub async fn leave(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		return Ok(());
 	};
 
-	let manager = &ctx.data().songbird;
+	let songbird = &ctx.data().songbird;
 
-	if manager.get(guild_id).is_some() {
-		if let Err(e) = manager.remove(guild_id).await {
+	if songbird.get(guild_id).is_some() {
+		if let Err(e) = songbird.remove(guild_id).await {
 			reply(ctx, format!("Error leaving voice channel: {}", e)).await?;
 		}
 
-		let lava_client = &ctx.data().lavalink;
-		lava_client.destroy(guild_id.0).await?;
+		let lavalink = &ctx.data().lavalink;
+		lavalink.destroy(guild_id.0).await?;
 
 		reply(ctx, "Left the voice channel.").await?;
 	} else {
@@ -138,6 +138,7 @@ pub async fn leave(ctx: PoiseContext<'_>) -> Result<(), Error> {
 }
 
 /// Queue up a song or playlist from YouTube, Twitch, Vimeo, SoundCloud, etc.
+///
 /// Spotify is sadly not supported.
 ///
 /// If Radium is provided with a URL, it will queue up all tracks it finds.
@@ -146,7 +147,7 @@ pub async fn leave(ctx: PoiseContext<'_>) -> Result<(), Error> {
 ///
 /// You may also use this command with attachments (audio or video files),
 /// though in that case you have to use the non-slash version of the command.
-#[command(prefix_command, slash_command, aliases("p"))]
+#[command(prefix_command, slash_command, category = "Playback", aliases("p"))]
 pub async fn play(
 	ctx: PoiseContext<'_>,
 	#[rest]
@@ -160,10 +161,10 @@ pub async fn play(
 		return Ok(());
 	};
 
-	let manager = &ctx.data().songbird;
-	let lava_client = &ctx.data().lavalink;
+	let songbird = &ctx.data().songbird;
+	let lavalink = &ctx.data().lavalink;
 
-	if manager.get(guild.id).is_none() {
+	if songbird.get(guild.id).is_none() {
 		let channel_id = if let Some(channel) = authour_channel_id(&guild, ctx.author().id) {
 			channel
 		} else {
@@ -175,7 +176,7 @@ pub async fn play(
 			return Ok(());
 		};
 
-		if let Err(e) = join_internal(manager, lava_client, guild.id, channel_id).await {
+		if let Err(e) = join_internal(songbird, lavalink, guild.id, channel_id).await {
 			reply(
 				ctx,
 				format!("Error joining {}: {}", channel_id.mention(), e),
@@ -200,7 +201,7 @@ pub async fn play(
 			}
 
 			// Queue it up
-			let mut query_result = lava_client.auto_search_tracks(&attachment.url).await?;
+			let mut query_result = lavalink.auto_search_tracks(&attachment.url).await?;
 			for track in &mut query_result.tracks {
 				track.info = match &track.info {
 					Some(old_info) => {
@@ -219,7 +220,7 @@ pub async fn play(
 
 	// Load the command query - if playable attachments were also with the message,
 	// the attachments are queued first
-	let query_information = lava_client.auto_search_tracks(&query).await?;
+	let query_information = lavalink.auto_search_tracks(&query).await?;
 
 	let is_url = Url::parse(query.trim()).is_ok();
 
@@ -446,7 +447,7 @@ pub async fn play(
 		}
 
 		// Queue
-		let mut queueable = lava_client.play(guild.id.0, track.clone());
+		let mut queueable = lavalink.play(guild.id.0, track.clone());
 		queueable.requester(ctx.author().id.0);
 		if let Some(start_time) = new_start_time {
 			queueable.start_time(start_time);
@@ -547,7 +548,12 @@ fn get_youtube_video_id(uri: &Url) -> Option<String> {
 }
 
 /// Skip the current track.
-#[command(prefix_command, slash_command, aliases("next", "stop", "n", "s"))]
+#[command(
+	prefix_command,
+	slash_command,
+	category = "Playback",
+	aliases("next", "stop", "n", "s")
+)]
 pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild_id = if let Some(guild_id) = ctx.guild_id() {
 		guild_id
@@ -556,12 +562,12 @@ pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		return Ok(());
 	};
 
-	let lava_client = &ctx.data().lavalink;
+	let lavalink = &ctx.data().lavalink;
 
-	if let Some(track) = lava_client.skip(guild_id.0).await {
+	if let Some(track) = lavalink.skip(guild_id.0).await {
 		let track_info = track.track.info.as_ref().unwrap();
 		// If the queue is now empty, the player needs to be stopped
-		if lava_client
+		if lavalink
 			.nodes()
 			.await
 			.get(&guild_id.0)
@@ -569,7 +575,7 @@ pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 			.queue
 			.is_empty()
 		{
-			lava_client
+			lavalink
 				.stop(guild_id.0)
 				.await
 				.with_context(|| "failed to stop playback of the current track".to_owned())?;
@@ -593,7 +599,7 @@ pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 /// Pause the current track.
 ///
 /// The opposite of `resume`.
-#[command(prefix_command, slash_command)]
+#[command(prefix_command, slash_command, category = "Playback")]
 pub async fn pause(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild_id = if let Some(guild_id) = ctx.guild_id() {
 		guild_id
@@ -602,9 +608,9 @@ pub async fn pause(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		return Ok(());
 	};
 
-	let lava_client = &ctx.data().lavalink;
+	let lavalink = &ctx.data().lavalink;
 
-	if let Err(e) = lava_client.pause(guild_id.0).await {
+	if let Err(e) = lavalink.pause(guild_id.0).await {
 		reply(ctx, "Failed to pause playback.").await?;
 		eprintln!("Failed to pause playback: {}", e);
 		return Ok(());
@@ -618,7 +624,7 @@ pub async fn pause(ctx: PoiseContext<'_>) -> Result<(), Error> {
 /// Resume the current track.
 ///
 /// The opposite of `pause`.
-#[command(prefix_command, slash_command)]
+#[command(prefix_command, slash_command, category = "Playback")]
 pub async fn resume(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild_id = if let Some(guild_id) = ctx.guild_id() {
 		guild_id
@@ -627,9 +633,9 @@ pub async fn resume(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		return Ok(());
 	};
 
-	let lava_client = &ctx.data().lavalink;
+	let lavalink = &ctx.data().lavalink;
 
-	if let Err(e) = lava_client.resume(guild_id.0).await {
+	if let Err(e) = lavalink.resume(guild_id.0).await {
 		reply(ctx, "Failed to resume playback.").await?;
 		eprintln!("Failed to resume playback: {}", e);
 		return Ok(());
@@ -646,7 +652,12 @@ pub async fn resume(ctx: PoiseContext<'_>) -> Result<(), Error> {
 /// time values (`2m35s`).
 ///
 /// If the time specified is past the end of the track, the track ends.
-#[command(prefix_command, slash_command, aliases("scrub", "jump"))]
+#[command(
+	prefix_command,
+	slash_command,
+	category = "Playback",
+	aliases("scrub", "jump")
+)]
 pub async fn seek(
 	ctx: PoiseContext<'_>,
 	#[rest]
@@ -742,9 +753,9 @@ pub async fn seek(
 		return Ok(());
 	};
 
-	let lava_client = &ctx.data().lavalink;
+	let lavalink = &ctx.data().lavalink;
 
-	if let Err(e) = lava_client.seek(guild_id.0, time_dur).await {
+	if let Err(e) = lavalink.seek(guild_id.0, time_dur).await {
 		reply(ctx, "Failed to seek to the specified time.").await?;
 		eprintln!("Failed to seek to the specified time: {}", e);
 		return Ok(());
@@ -760,7 +771,7 @@ pub async fn seek(
 /// In addition to clearing the queue, this also resets the queue position for
 /// new tracks. This is the only way this happens other than when the bot goes
 /// offline.
-#[command(prefix_command, slash_command, aliases("c"))]
+#[command(prefix_command, slash_command, category = "Playback", aliases("c"))]
 pub async fn clear(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild_id = if let Some(guild_id) = ctx.guild_id() {
 		guild_id
@@ -769,10 +780,10 @@ pub async fn clear(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		return Ok(());
 	};
 
-	let lava_client = &ctx.data().lavalink;
+	let lavalink = &ctx.data().lavalink;
 
-	while lava_client.skip(guild_id.0).await.is_some() {}
-	lava_client
+	while lavalink.skip(guild_id.0).await.is_some() {}
+	lavalink
 		.stop(guild_id.0)
 		.await
 		.with_context(|| "failed to stop playback of the current track".to_owned())?;
@@ -787,7 +798,7 @@ pub async fn clear(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	Ok(())
 }
 
-/// Show what's currently playing, and how far in you are in the track.
+/// Show what's currently playing, and how far along in the track Radium is.
 ///
 /// If the track has a defined end point, a progress bar will be displayed.
 /// Otherwise, if the track is a live stream, only the time it's been playing
@@ -795,6 +806,7 @@ pub async fn clear(ctx: PoiseContext<'_>) -> Result<(), Error> {
 #[command(
 	prefix_command,
 	slash_command,
+	category = "Playback",
 	rename = "nowplaying",
 	aliases("np", "position", "current", "rn")
 )]
@@ -858,10 +870,10 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		return Ok(());
 	};
 
-	let lava_client = &ctx.data().lavalink;
+	let lavalink = &ctx.data().lavalink;
 
 	let mut something_playing = false;
-	if let Some(node) = lava_client.nodes().await.get(&guild_id.0) {
+	if let Some(node) = lavalink.nodes().await.get(&guild_id.0) {
 		if let Some(now_playing) = &node.now_playing {
 			let track_info = now_playing.track.info.as_ref().unwrap();
 			let track_segments = {
@@ -926,7 +938,7 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 }
 
 /// Show the playback queue.
-#[command(prefix_command, slash_command, aliases("q"))]
+#[command(prefix_command, slash_command, category = "Playback", aliases("q"))]
 pub async fn queue(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let guild_id = if let Some(guild_id) = ctx.guild_id() {
 		guild_id
@@ -935,10 +947,10 @@ pub async fn queue(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		return Ok(());
 	};
 
-	let lava_client = &ctx.data().lavalink;
+	let lavalink = &ctx.data().lavalink;
 
 	let mut something_in_queue = false;
-	if let Some(node) = lava_client.nodes().await.get(&guild_id.0) {
+	if let Some(node) = lavalink.nodes().await.get(&guild_id.0) {
 		let queue = &node.queue;
 		let queue_len = queue.len();
 

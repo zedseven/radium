@@ -6,7 +6,7 @@ use std::{
 
 use lavalink_rs::{
 	gateway::LavalinkEventHandler,
-	model::{GuildId, PlayerUpdate, TrackStart, TrackStuck},
+	model::{GuildId, PlayerDestroyed, PlayerUpdate, TrackStart, TrackStuck, WebSocketClosed},
 	LavalinkClient,
 };
 use poise::serenity::async_trait;
@@ -120,6 +120,14 @@ impl LavalinkEventHandler for LavalinkHandler {
 		println!("A currently-playing track is stuck. Skipping.");
 		dbg!(&event);
 		client.skip(event.guild_id).await;
+	}
+
+	async fn websocket_closed(&self, _client: LavalinkClient, event: WebSocketClosed) {
+		dbg!(&event);
+	}
+
+	async fn player_destroyed(&self, _client: LavalinkClient, event: PlayerDestroyed) {
+		dbg!(&event);
 	}
 }
 
