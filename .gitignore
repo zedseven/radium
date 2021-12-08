@@ -12,6 +12,9 @@
 # JetBrains IDEs' config & project settings directory
 **/.idea/
 
+# Database files
+*.sqlite
+
 # The environment variable file containing the bot token etc.
 **/.env
 

@@ -1,6 +1,6 @@
 [package]
 name = "radium"
-version = "1.7.1"
+version = "1.8.0"
 authors = ["Zacchary Dempsey-Plante <zacc@ztdp.ca>"]
 edition = "2021"
 license = "GPL-3.0-or-later"
@@ -8,6 +8,8 @@ description = "A simple music & dice bot made for personal use."
 
 [dependencies]
 anyhow = "1.0"
+diesel = { version = "1.4", features = ["r2d2", "sqlite"] }
+diesel_migrations = "1.4"
 dotenv = "0.15"
 lavalink-rs = { git = "https://gitlab.com/vicky5124/lavalink-rs", features = ["rustls", "serenity"] }
 lazy_static = "1.4"
@@ -32,6 +34,10 @@ git = "https://github.com/serenity-rs/songbird"
 branch = "next"
 default-features = false
 features = ["serenity-rustls", "gateway"]
+
+[target.'cfg(windows)'.dependencies]
+# To have sqlite3.lib be linked automatically
+libsqlite3-sys = { version = "0.22", default-features = false, features = ["bundled"] }
 
 [patch.crates-io]
 # Potentially have to run `cargo update -p serenity:<version> --precise <whatever version is in the git repo>`

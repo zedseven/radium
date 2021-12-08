@@ -14,6 +14,8 @@ widespread use.
 - [Serenity](https://github.com/serenity-rs/serenity)
 - [Songbird](https://github.com/serenity-rs/songbird)
 - [Lavalink](https://github.com/freyacodes/Lavalink) (with the [lavalink-rs](https://gitlab.com/vicky5124/lavalink-rs) Rust wrapper).
+- [Diesel](https://diesel.rs/)
+- [SQLite](https://sqlite.org/index.html)
 - [SponsorBlock](https://sponsor.ajay.app/) (with my [sponsor-block-rs](https://github.com/zedseven/sponsor-block-rs) Rust wrapper).
 
 ## SponsorBlock Integration

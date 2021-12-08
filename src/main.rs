@@ -37,9 +37,15 @@
 	unused_macros
 )]
 
+#[macro_use]
+extern crate diesel;
+#[macro_use]
+extern crate diesel_migrations;
+
 // Modules
 mod commands;
 mod constants;
+mod db;
 mod event_handlers;
 mod segments;
 mod util;
@@ -54,6 +60,10 @@ use std::{
 };
 
 use anyhow::Context;
+use diesel::{
+	r2d2::{ConnectionManager, Pool},
+	SqliteConnection,
+};
 use dotenv::dotenv;
 use lavalink_rs::LavalinkClient;
 use poise::{
@@ -71,12 +81,15 @@ use yansi::Paint;
 use crate::{
 	commands::*,
 	constants::{HEADER_STYLE, PREFIX, PROGRAM_VERSION},
+	db::init as database_init,
 	event_handlers::{LavalinkHandler, SerenityHandler},
 	segments::SegmentData,
 };
 
 // Runtime Constants
 const DISCORD_TOKEN_VAR: &str = "DISCORD_TOKEN";
+const DATABASE_URL_VAR: &str = "DATABASE_URL";
+const DATABASE_URL_DEFAULT: &str = "db.sqlite";
 const LAVALINK_HOST_VAR: &str = "LAVALINK_HOST";
 const LAVALINK_PASSWORD_VAR: &str = "LAVALINK_PASSWORD";
 const LAVALINK_HOST_DEFAULT: &str = "127.0.0.1";
@@ -92,6 +105,7 @@ pub type PoisePrefixContext<'a> = poise::PrefixContext<'a, DataArc, Error>;
 pub type SerenityContext = serenity::client::Context;
 
 pub struct Data {
+	db_pool: Pool<ConnectionManager<SqliteConnection>>,
 	songbird: Arc<Songbird>,
 	lavalink: LavalinkClient,
 	sponsor_block: SponsorBlockClient,
@@ -188,6 +202,8 @@ async fn main() -> Result<(), Error> {
 	// Chance
 	options.command(roll(), |f| f);
 	options.command(batch_roll(), |f| f);
+	options.command(save_roll(), |f| f);
+	options.command(run_roll(), |f| f);
 	options.command(dice_jail(), |f| f);
 
 	// Start up the bot
@@ -225,10 +241,15 @@ async fn main() -> Result<(), Error> {
 		None => println!("Unknown"),
 	}
 
+	let database_pool =
+		database_init(var(DATABASE_URL_VAR).unwrap_or_else(|_| DATABASE_URL_DEFAULT.to_owned()))
+			.with_context(|| "failed to initialize the database")?;
+
 	let songbird = Songbird::serenity();
 	let songbird_clone = Arc::clone(&songbird); // Required because the closure that uses it moves the value
 
 	let data = Arc::new(Data {
+		db_pool: database_pool,
 		songbird: songbird_clone,
 		lavalink: lava_client,
 		sponsor_block: sponsor_block_client,

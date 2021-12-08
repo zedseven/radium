@@ -39,6 +39,7 @@
   - `saveroll` command for saving a roll command
   - Commands for querying/deleting saved rolls
   - Executing a saved roll simply calls `parse_roll_command`
+  - `rr` or `runroll`
 - Dice rolling do lots of individual rolls at once (for DMs)
 - "New dice" command that does nothing
 - Persistent storage

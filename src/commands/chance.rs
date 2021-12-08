@@ -1,10 +1,25 @@
 // Uses
 use std::{cmp::Reverse, collections::VecDeque, num::ParseIntError, str::FromStr};
 
+use anyhow::{Context, Error as AnyhowError};
+use diesel::{
+	insert_or_ignore_into,
+	replace_into,
+	select,
+	Connection,
+	QueryDsl,
+	RunQueryDsl,
+	TextExpressionMethods,
+};
 use poise::{command, serenity::model::misc::Mentionable};
 use rand::{distributions::Uniform, thread_rng, Rng};
 
 use crate::{
+	db::{
+		functions::last_insert_rowid,
+		models::{SavedRoll, SavedRollAlias},
+		schema::*,
+	},
 	util::{escape_str, is_application_context, reply, reply_embed, reply_plain},
 	Error,
 	PoiseContext,
@@ -15,50 +30,20 @@ const ANNOTATION_CHAR: char = '!';
 const OPERATOR_SYMBOLS: [char; 10] = ['^', '*', '×', 'x', '/', '÷', '+', '-', '(', ')'];
 const MAX_FIELD_VALUE: usize = 1024;
 
-/// Roll as many dice as you want, and do whatever math you need to do with
-/// their roll results.
-///
-/// Dice rolls are specified as `<count>d<size>`, eg. `2d8`. If the count is 1,
-/// you can leave it off. (eg. `d20`)
-///
-/// Dice rolls also support (dis)advantage. Simply put a `b` (for best) or `w`
-/// (for worst) on the end of the roll, eg. `3d10b2`. Again, if you only want
-/// the best 1, you can leave it off. (eg. `2d20w` for disadvantage)
-///
-/// You can do whatever math you want with the dice values, or even do pure math
-/// with no dice involved. (eg. `/roll (2d20b + 1d8) ^ 2 / 3`)
-#[command(
-	prefix_command,
-	slash_command,
-	category = "Chance",
-	aliases("eval", "evaluate", "calc", "calculate", "r")
-)]
-pub async fn roll(
+async fn execute_roll(
 	ctx: PoiseContext<'_>,
-	#[rest]
-	#[description = "The dice to roll. Follow the command with `!` to annotate what the roll is \
-	                 for."]
-	command: String,
+	command: &str,
+	annotation: Option<&str>,
 ) -> Result<(), Error> {
 	let slash_command = is_application_context(&ctx);
 
-	let annotation_index = command.find(ANNOTATION_CHAR);
-	let command_slice = match annotation_index {
-		Some(index) => command[0..index].trim(),
-		None => command.trim(),
-	};
-
-	if let Some(rpn) = parse_roll_command(command_slice) {
+	if let Some(rpn) = parse_roll_command(command) {
 		if let Some((result, dice_rolls)) = evaluate_roll_command(&rpn) {
 			// Display preparation
 			let mut rolls_string = display_rolls(&dice_rolls);
 
 			// Annotation parsing
-			let annotation = escape_str(if let Some(index) = annotation_index {
-				command[(index + 1)..].trim()
-			} else {
-				""
-			});
+			let annotation_escaped = annotation.map(escape_str);
 
 			// Display
 			let dice_rolls_len = dice_rolls.len();
@@ -74,7 +59,7 @@ pub async fn roll(
 				.trim_end_matches('.')
 				.to_owned();
 
-			let command_slice_escaped = escape_str(command_slice);
+			let command_slice_escaped = escape_str(command);
 
 			if display_big_result {
 				if rolls_string.len() > MAX_FIELD_VALUE {
@@ -85,7 +70,7 @@ pub async fn roll(
 					if !slash_command {
 						e.field("For:", ctx.author().mention(), true);
 					}
-					if !annotation.is_empty() {
+					if let Some(annotation) = annotation_escaped {
 						e.field("Reason:", format!("`{}`", annotation), true);
 					}
 					e.field("Command:", format!("`{}`", command_slice_escaped), false)
@@ -98,7 +83,7 @@ pub async fn roll(
 				if !slash_command {
 					display.push_str(ctx.author().mention().to_string().as_str());
 				}
-				if !annotation.is_empty() {
+				if let Some(annotation) = annotation_escaped {
 					display.push_str(" `");
 					display.push_str(annotation.as_str());
 					display.push('`');
@@ -132,6 +117,45 @@ pub async fn roll(
 		reply(ctx, "Invalid command.").await?;
 		return Ok(());
 	}
+
+	Ok(())
+}
+
+/// Roll as many dice as you want, and do whatever math you need to do with
+/// their roll results.
+///
+/// Dice rolls are specified as `<count>d<size>`, eg. `2d8`. If the count is 1,
+/// you can leave it off. (eg. `d20`)
+///
+/// Dice rolls also support (dis)advantage. Simply put a `b` (for best) or `w`
+/// (for worst) on the end of the roll, eg. `3d10b2`. Again, if you only want
+/// the best 1, you can leave it off. (eg. `2d20w` for disadvantage)
+///
+/// You can do whatever math you want with the dice values, or even do pure math
+/// with no dice involved. (eg. `/roll (2d20b + 1d8) ^ 2 / 3`)
+#[command(
+	prefix_command,
+	slash_command,
+	category = "Chance",
+	aliases("eval", "evaluate", "calc", "calculate", "r")
+)]
+pub async fn roll(
+	ctx: PoiseContext<'_>,
+	#[rest]
+	#[description = "The dice to roll. Follow the command with `!` to annotate what the roll is \
+	                 for."]
+	command: String,
+) -> Result<(), Error> {
+	// Parse the raw command string into clean, meaningful slices
+	let annotation_index = command.find(ANNOTATION_CHAR);
+	let command_slice = match annotation_index {
+		Some(index) => command[0..index].trim(),
+		None => command.trim(),
+	};
+	let annotation_slice = annotation_index.map(|index| command[(index + 1)..].trim());
+
+	// Execute the command
+	execute_roll(ctx, command_slice, annotation_slice).await?;
 
 	Ok(())
 }
@@ -579,6 +603,181 @@ fn display_rolls(dice_rolls: &[Vec<u32>]) -> String {
 	rolls_string.push('`');
 
 	rolls_string
+}
+
+/// Save a roll command for frequent use.
+///
+/// The command should be typed out exactly as you would when using the roll
+/// command. (without the "-roll")
+///
+/// The command name is case-insensitive.
+#[command(
+	prefix_command,
+	slash_command,
+	category = "Chance",
+	rename = "saveroll",
+	aliases("sr")
+)]
+pub async fn save_roll(
+	ctx: PoiseContext<'_>,
+	#[description = "The name to save the command as."] names: String,
+	#[rest]
+	#[description = "The roll command to save. Type it out exactly how you would if you were \
+	                 using the roll command."]
+	command: String,
+) -> Result<(), Error> {
+	const IDENTIFIER_CHAR: char = ',';
+
+	// Get the associated guild ID or exit
+	let guild_id = if let Some(guild_id) = ctx.guild_id() {
+		guild_id.0 as i64
+	} else {
+		reply(ctx, "You must use this command from within a server.").await?;
+		return Ok(());
+	};
+	let user_id = ctx.author().id.0 as i64;
+
+	// Clean up the input
+	let mut name = String::new();
+	let mut aliases = Vec::new();
+	for (i, identifier) in names
+		.trim()
+		.to_lowercase()
+		.split(IDENTIFIER_CHAR)
+		.enumerate()
+	{
+		if i == 0 {
+			name = identifier.to_owned();
+		} else {
+			aliases.push(identifier.to_owned());
+		}
+	}
+
+	let command = command.trim();
+
+	// Verify that the command is valid
+	if command.contains(ANNOTATION_CHAR) {
+		reply(ctx, "You cannot include annotations on saved commands.").await?;
+		return Ok(());
+	}
+	if parse_roll_command(command).is_none() {
+		reply(ctx, "Invalid command.").await?;
+		return Ok(());
+	}
+
+	// Create the new records and insert
+	let conn = ctx.data().db_pool.get().unwrap();
+
+	conn.transaction::<_, AnyhowError, _>(|| {
+		// Insert the roll command
+		let saved_roll = SavedRoll {
+			id: None,
+			guild_id,
+			user_id,
+			name: name.clone(),
+			command: command.to_owned(),
+		};
+		replace_into(saved_rolls::table)
+			.values(&saved_roll)
+			.execute(&conn)
+			.with_context(|| "failed to save the roll command to the database")?;
+
+		// Get the ID of the saved roll that was just inserted
+		let saved_roll_id = select(last_insert_rowid)
+			.get_result::<i32>(&conn)
+			.with_context(|| "failed to get the last-inserted record ID from the database")?;
+
+		// Insert the roll aliases
+		for alias in aliases.drain(..) {
+			let roll_alias = SavedRollAlias {
+				id: None,
+				saved_roll_id,
+				alias,
+			};
+			insert_or_ignore_into(saved_roll_aliases::table)
+				.values(&roll_alias)
+				.execute(&conn)
+				.with_context(|| "failed to save a roll command alias to the database")?;
+		}
+
+		Ok(())
+	})?;
+
+	// Finish up
+	reply(ctx, format!("Saved the roll command `{}`.", name)).await?;
+
+	Ok(())
+}
+
+/// Run a saved roll command.
+#[command(
+	prefix_command,
+	slash_command,
+	category = "Chance",
+	rename = "runroll",
+	aliases("rr")
+)]
+pub async fn run_roll(
+	ctx: PoiseContext<'_>,
+	#[description = "The name of the saved roll command to run."] identifier: String,
+	#[rest]
+	#[description = "Additional roll command modifiers and reason, if any."]
+	additional: String,
+) -> Result<(), Error> {
+	// Clean and prepare the identifier
+	let identifier_query = format!("{}%", identifier.trim().to_lowercase());
+
+	// Fetch the command to execute from the database
+	let (mut roll_reason, mut roll_command) = {
+		use self::{saved_roll_aliases::dsl::*, saved_rolls::dsl::*};
+
+		let conn = ctx.data().db_pool.get().unwrap();
+
+		let search_result = saved_rolls
+			.left_join(saved_roll_aliases)
+			.filter(name.like(&identifier_query))
+			.or_filter(alias.like(&identifier_query))
+			.select((name, command))
+			.limit(1)
+			.get_result::<(String, String)>(&conn);
+
+		if search_result.is_err() {
+			reply(
+				ctx,
+				format!(
+					"A saved roll by the name or alias `{}` does not exist.",
+					&identifier_query
+				),
+			)
+			.await?;
+			return Ok(());
+		}
+
+		search_result.unwrap()
+	};
+
+	// Parse the raw command string into clean, meaningful slices
+	let annotation_index = additional.find(ANNOTATION_CHAR);
+	let additional_command_slice =
+		annotation_index.map_or_else(|| additional.trim(), |index| additional[0..index].trim());
+	let additional_annotation_slice =
+		annotation_index.map_or("", |index| additional[(index + 1)..].trim());
+
+	// Combine the saved roll with the additional information provided, if any
+	if !additional_command_slice.is_empty() {
+		roll_command.insert(0, '(');
+		roll_command.push_str(") ");
+		roll_command.push_str(additional_command_slice);
+	}
+	if !additional_annotation_slice.is_empty() {
+		roll_reason.push_str("; ");
+		roll_reason.push_str(additional_annotation_slice);
+	}
+
+	// Execute the command
+	execute_roll(ctx, roll_command.as_str(), Some(roll_reason.as_str())).await?;
+
+	Ok(())
 }
 
 /// Put bad dice in dice jail and get new dice.
