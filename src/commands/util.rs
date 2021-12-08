@@ -7,7 +7,7 @@ use poise::{
 };
 
 use crate::{
-	constants::{CREATED_DATE, CREATOR_ID, PREFIX, PROGRAM_VERSION, SOURCE_LINK},
+	constants::{CREATED_DATE, CREATOR_ID, PREFIX, PROGRAM_COMMIT, PROGRAM_VERSION, SOURCE_LINK},
 	util::{reply, reply_embed},
 	Error,
 	PoiseContext,
@@ -93,7 +93,10 @@ pub async fn help(
 pub async fn about(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	reply_embed(ctx, |e| {
 		e.title("Radium")
-			.description(format!("The Radium Radio bot, `v{}`.", PROGRAM_VERSION))
+			.description(format!(
+				"The Radium Radio bot, [`v{}`]({}/commit/{}).",
+				PROGRAM_VERSION, SOURCE_LINK, PROGRAM_COMMIT
+			))
 			.field("Authour:", CREATOR_ID.mention(), false)
 			.field("Source Link:", SOURCE_LINK, false)
 			.field(

@@ -80,7 +80,7 @@ use yansi::Paint;
 
 use crate::{
 	commands::*,
-	constants::{HEADER_STYLE, PREFIX, PROGRAM_VERSION},
+	constants::{COMMIT_NUMBER_CHOP_LENGTH, HEADER_STYLE, PREFIX, PROGRAM_COMMIT, PROGRAM_VERSION},
 	db::init as database_init,
 	event_handlers::{LavalinkHandler, SerenityHandler},
 	segments::SegmentData,
@@ -95,7 +95,6 @@ const LAVALINK_PASSWORD_VAR: &str = "LAVALINK_PASSWORD";
 const LAVALINK_HOST_DEFAULT: &str = "127.0.0.1";
 const SPONSOR_BLOCK_USER_ID_VAR: &str = "SPONSOR_BLOCK_USER_ID";
 const DISABLE_CLI_COLOURS_VAR: &str = "DISABLE_CLI_COLOURS";
-const COMMIT_NUMBER_CHOP_LENGTH: usize = 8;
 
 // Definitions
 pub type DataArc = Arc<Data>;
@@ -163,6 +162,11 @@ async fn main() -> Result<(), Error> {
 		.owner
 		.id;
 
+	println!(
+		"{}     {}",
+		HEADER_STYLE.paint("Build Commit:"),
+		&PROGRAM_COMMIT[..COMMIT_NUMBER_CHOP_LENGTH]
+	);
 	println!("{}   {}", HEADER_STYLE.paint("Application ID:"), app_id);
 	println!("{}         {}", HEADER_STYLE.paint("Owner ID:"), owner_id);
 

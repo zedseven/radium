@@ -1,6 +1,6 @@
 [package]
 name = "radium"
-version = "1.8.0"
+version = "1.8.1"
 authors = ["Zacchary Dempsey-Plante <zacc@ztdp.ca>"]
 edition = "2021"
 license = "GPL-3.0-or-later"
@@ -38,6 +38,10 @@ features = ["serenity-rustls", "gateway"]
 [target.'cfg(windows)'.dependencies]
 # To have sqlite3.lib be linked automatically
 libsqlite3-sys = { version = "0.22", default-features = false, features = ["bundled"] }
+
+[build-dependencies]
+anyhow = "1.0"
+vergen = { version = "5.2", default-features = false, features = ["git"] }
 
 [patch.crates-io]
 # Potentially have to run `cargo update -p serenity:<version> --precise <whatever version is in the git repo>`
