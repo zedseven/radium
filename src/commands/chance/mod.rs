@@ -54,7 +54,7 @@ pub async fn roll(
 	let annotation_slice = annotation_index.map(|index| command[(index + 1)..].trim());
 
 	// Execute the command
-	execute_roll(ctx, command_slice, annotation_slice).await?;
+	execute_roll(ctx, command_slice, annotation_slice, false).await?;
 
 	Ok(())
 }
@@ -247,8 +247,8 @@ pub async fn run_roll(
 			reply(
 				ctx,
 				format!(
-					"A saved roll by the name or alias `{}` does not exist.",
-					&identifier_query
+					"A saved roll could not be found for the query `{}`.",
+					identifier
 				),
 			)
 			.await?;
@@ -277,7 +277,7 @@ pub async fn run_roll(
 	}
 
 	// Execute the command
-	execute_roll(ctx, roll_command.as_str(), Some(roll_reason.as_str())).await?;
+	execute_roll(ctx, roll_command.as_str(), Some(roll_reason.as_str()), true).await?;
 
 	Ok(())
 }
@@ -328,6 +328,7 @@ async fn execute_roll(
 	ctx: PoiseContext<'_>,
 	command: &str,
 	annotation: Option<&str>,
+	always_show_command_in_output: bool,
 ) -> Result<(), Error> {
 	let slash_command = is_application_context(&ctx);
 
@@ -382,8 +383,8 @@ async fn execute_roll(
 					display.push_str(annotation.as_str());
 					display.push('`');
 				}
-				if slash_command {
-					display.push_str(" `");
+				if always_show_command_in_output || slash_command {
+					display.push_str(" - `");
 					display.push_str(command_slice_escaped.as_str());
 					display.push('`');
 				}
