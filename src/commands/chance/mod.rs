@@ -2,6 +2,8 @@
 mod roll;
 
 // Uses
+use std::borrow::Cow;
+
 use anyhow::Context;
 use diesel::{
 	delete,
@@ -205,8 +207,8 @@ pub async fn save_roll(
 		let saved_roll = SavedRoll {
 			guild_id: ctx_guild_id,
 			user_id: ctx_user_id,
-			name: identifier.clone(),
-			command: command.to_owned(),
+			name: Cow::from(identifier.as_str()),
+			command: Cow::from(command),
 		};
 		replace_into(saved_rolls::table)
 			.values(&saved_roll)
