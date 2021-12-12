@@ -3,7 +3,14 @@ mod roll;
 
 // Uses
 use anyhow::Context;
-use diesel::{replace_into, QueryDsl, RunQueryDsl, TextExpressionMethods};
+use diesel::{
+	delete,
+	replace_into,
+	ExpressionMethods,
+	QueryDsl,
+	RunQueryDsl,
+	TextExpressionMethods,
+};
 use poise::{command, serenity::model::misc::Mentionable};
 
 use self::roll::{evaluate_roll_rpn, parse_roll_command, Dice};
@@ -162,22 +169,22 @@ pub async fn batch_roll(
 )]
 pub async fn save_roll(
 	ctx: PoiseContext<'_>,
-	#[description = "The name to save the command as."] name: String,
+	#[description = "The name to save the command as."] mut identifier: String,
 	#[rest]
 	#[description = "The roll command to save. Type it out exactly how you would if you were \
 	                 using the roll command."]
 	command: String,
 ) -> Result<(), Error> {
-	// Get the associated guild ID or exit
-	let guild_id = if let Some(guild_id) = ctx.guild_id() {
-		guild_id.0 as i64
+	// Get the associated IDs or exit
+	let (ctx_guild_id, ctx_user_id) = if let Some(ids) = get_ctx_ids(ctx) {
+		ids
 	} else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
 	};
-	let user_id = ctx.author().id.0 as i64;
 
 	// Clean up the input
+	identifier = identifier.to_lowercase();
 	let command = command.trim();
 
 	// Verify that the command is valid
@@ -185,7 +192,7 @@ pub async fn save_roll(
 		reply(ctx, "You cannot include annotations on saved commands.").await?;
 		return Ok(());
 	}
-	if parse_roll_command(command).is_err() {
+	if command.is_empty() || parse_roll_command(command).is_err() {
 		reply(ctx, "Invalid command.").await?;
 		return Ok(());
 	}
@@ -196,9 +203,9 @@ pub async fn save_roll(
 
 		// Insert the roll command
 		let saved_roll = SavedRoll {
-			guild_id,
-			user_id,
-			name: name.clone(),
+			guild_id: ctx_guild_id,
+			user_id: ctx_user_id,
+			name: identifier.clone(),
 			command: command.to_owned(),
 		};
 		replace_into(saved_rolls::table)
@@ -208,8 +215,67 @@ pub async fn save_roll(
 	}
 
 	// Finish up
-	reply(ctx, format!("Saved the roll command `{}`.", name)).await?;
+	reply(ctx, format!("Saved the roll command `{}`.", identifier)).await?;
 
+	Ok(())
+}
+
+/// Delete a saved roll command.
+#[command(
+	prefix_command,
+	slash_command,
+	category = "Chance",
+	rename = "deleteroll"
+)]
+pub async fn delete_roll(
+	ctx: PoiseContext<'_>,
+	#[description = "The name of the saved roll command to delete."] mut identifier: String,
+) -> Result<(), Error> {
+	// Get the associated IDs or exit
+	let (ctx_guild_id, ctx_user_id) = if let Some(ids) = get_ctx_ids(ctx) {
+		ids
+	} else {
+		reply(ctx, "You must use this command from within a server.").await?;
+		return Ok(());
+	};
+
+	// Prepare the identifier
+	identifier = identifier.to_lowercase();
+
+	// Delete the row
+	let deleted_rows = {
+		use self::saved_rolls::dsl::*;
+
+		let conn = ctx.data().db_pool.get().unwrap();
+
+		delete(saved_rolls)
+			.filter(guild_id.eq(ctx_guild_id))
+			.filter(user_id.eq(ctx_user_id))
+			.filter(name.eq(&identifier))
+			.execute(&conn)
+	};
+
+	// Respond with the result
+	if let Ok(count) = deleted_rows {
+		if count == 1 {
+			reply(ctx, format!("The saved roll `{}` was deleted.", identifier)).await?;
+		} else {
+			reply(
+				ctx,
+				format!(
+					"A saved roll could not be found with the name `{}`.",
+					identifier
+				),
+			)
+			.await?;
+		}
+	} else {
+		reply(
+			ctx,
+			format!("A problem was encountered with deleting `{}`.", identifier),
+		)
+		.await?;
+	}
 	Ok(())
 }
 
@@ -228,6 +294,14 @@ pub async fn run_roll(
 	#[description = "Additional roll command modifiers and reason, if any."]
 	additional: String,
 ) -> Result<(), Error> {
+	// Get the associated IDs or exit
+	let (ctx_guild_id, ctx_user_id) = if let Some(ids) = get_ctx_ids(ctx) {
+		ids
+	} else {
+		reply(ctx, "You must use this command from within a server.").await?;
+		return Ok(());
+	};
+
 	// Clean and prepare the identifier
 	let identifier_query = format!("{}%", identifier.trim().to_lowercase());
 
@@ -238,6 +312,8 @@ pub async fn run_roll(
 		let conn = ctx.data().db_pool.get().unwrap();
 
 		let search_result = saved_rolls
+			.filter(guild_id.eq(ctx_guild_id))
+			.filter(user_id.eq(ctx_user_id))
 			.filter(name.like(&identifier_query))
 			.select((name, command))
 			.limit(1)
@@ -278,6 +354,61 @@ pub async fn run_roll(
 
 	// Execute the command
 	execute_roll(ctx, roll_command.as_str(), Some(roll_reason.as_str()), true).await?;
+
+	Ok(())
+}
+
+/// Show a list of all your saved rolls.
+#[command(
+	prefix_command,
+	slash_command,
+	category = "Chance",
+	rename = "savedrolls"
+)]
+pub async fn saved_rolls(ctx: PoiseContext<'_>) -> Result<(), Error> {
+	// Get the associated IDs or exit
+	let (ctx_guild_id, ctx_user_id) = if let Some(ids) = get_ctx_ids(ctx) {
+		ids
+	} else {
+		reply(ctx, "You must use this command from within a server.").await?;
+		return Ok(());
+	};
+
+	// Fetch the command to execute from the database
+	let saved_commands = {
+		use self::saved_rolls::dsl::*;
+
+		let conn = ctx.data().db_pool.get().unwrap();
+
+		saved_rolls
+			.filter(guild_id.eq(ctx_guild_id))
+			.filter(user_id.eq(ctx_user_id))
+			.order_by(name)
+			.select((name, command))
+			.load::<(String, String)>(&conn)
+			.with_context(|| "failed to retrieve a list of the saved roll commands")?
+	};
+
+	if saved_commands.is_empty() {
+		reply(
+			ctx,
+			format!(
+				"No saved rolls could be found for {}.",
+				ctx.author().id.mention()
+			),
+		)
+		.await?;
+		return Ok(());
+	}
+
+	// Prepare the formatted list
+	let mut output = format!("For {}:", ctx.author().id.mention());
+	for (name, command) in &saved_commands {
+		output.push_str(format!("\n**{}:** `{}`", name, command).as_str());
+	}
+
+	// Send the reply
+	reply_embed(ctx, |e| e.title("Saved Rolls").description(output)).await?;
 
 	Ok(())
 }
@@ -452,4 +583,16 @@ fn display_rolls(dice_rolls: &[Vec<u32>]) -> String {
 	rolls_string.push('`');
 
 	rolls_string
+}
+
+/// Retrieves the guild ID and user ID from the message context.
+fn get_ctx_ids(ctx: PoiseContext) -> Option<(i64, i64)> {
+	Some((
+		if let Some(guild_id) = ctx.guild_id() {
+			guild_id.0 as i64
+		} else {
+			return None;
+		},
+		ctx.author().id.0 as i64,
+	))
 }

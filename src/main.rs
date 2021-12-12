@@ -37,6 +37,7 @@
 	unused_macros
 )]
 
+// Macro Imports
 #[macro_use]
 extern crate diesel;
 #[macro_use]
@@ -207,6 +208,8 @@ async fn main() -> Result<(), Error> {
 	options.command(roll(), |f| f);
 	options.command(batch_roll(), |f| f);
 	options.command(save_roll(), |f| f);
+	options.command(delete_roll(), |f| f);
+	options.command(saved_rolls(), |f| f);
 	options.command(run_roll(), |f| f);
 	options.command(dice_jail(), |f| f);
 
