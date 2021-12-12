@@ -41,9 +41,8 @@ libsqlite3-sys = { version = "0.22", default-features = false, features = ["bund
 
 [build-dependencies]
 anyhow = "1.0"
-vergen = { version = "5.2", default-features = false, features = ["git"] }
+vergen = { version = "6.0", default-features = false, features = ["git"] }
 
 [patch.crates-io]
-# Potentially have to run `cargo update -p serenity:<version> --precise <whatever version is in the git repo>`
 serenity = { git = "https://github.com/serenity-rs/serenity", branch = "next" }
 songbird = { git = "https://github.com/serenity-rs/songbird", branch = "next" }
