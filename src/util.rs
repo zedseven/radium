@@ -77,6 +77,14 @@ pub fn chop_str(s: &str, max_len: usize) -> String {
 	base
 }
 
+pub fn none_on_empty(s: &str) -> Option<&str> {
+	if s.is_empty() {
+		None
+	} else {
+		Some(s)
+	}
+}
+
 pub fn is_application_context(ctx: &PoiseContext<'_>) -> bool {
 	match ctx {
 		PoiseContext::Application(_) => true,

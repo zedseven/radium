@@ -18,7 +18,7 @@ use poise::{command, serenity::model::misc::Mentionable};
 use self::roll::{evaluate_roll_rpn, parse_roll_command, Dice};
 use crate::{
 	db::{models::SavedRoll, schema::*},
-	util::{escape_str, is_application_context, reply, reply_embed, reply_plain},
+	util::{escape_str, is_application_context, none_on_empty, reply, reply_embed, reply_plain},
 	Error,
 	PoiseContext,
 };
@@ -191,7 +191,12 @@ pub async fn save_roll(
 
 	// Verify that the command is valid
 	if command.contains(ANNOTATION_CHAR) {
-		reply(ctx, "You cannot include annotations on saved commands.").await?;
+		reply(
+			ctx,
+			"You cannot include annotations on saved commands. The identifier will be used as an \
+			 annotation, and you can annotate when you run the saved rolls as well.",
+		)
+		.await?;
 		return Ok(());
 	}
 	if command.is_empty() || parse_roll_command(command).is_err() {
@@ -294,7 +299,7 @@ pub async fn run_roll(
 	#[description = "The name of the saved roll command to run."] identifier: String,
 	#[rest]
 	#[description = "Additional roll command modifiers and reason, if any."]
-	additional: String,
+	additional: Option<String>,
 ) -> Result<(), Error> {
 	// Get the associated IDs or exit
 	let (ctx_guild_id, ctx_user_id) = if let Some(ids) = get_ctx_ids(ctx) {
@@ -337,21 +342,28 @@ pub async fn run_roll(
 	};
 
 	// Parse the raw command string into clean, meaningful slices
-	let annotation_index = additional.find(ANNOTATION_CHAR);
-	let additional_command_slice =
-		annotation_index.map_or_else(|| additional.trim(), |index| additional[0..index].trim());
-	let additional_annotation_slice =
-		annotation_index.map_or("", |index| additional[(index + 1)..].trim());
+	let annotation_index = additional.as_ref().and_then(|a| a.find(ANNOTATION_CHAR));
+	let additional_command_slice = additional
+		.as_ref()
+		.map(|full_string| {
+			annotation_index
+				.map_or_else(|| full_string.trim(), |index| full_string[0..index].trim())
+		})
+		.and_then(none_on_empty);
+	let additional_annotation_slice = additional
+		.as_ref()
+		.and_then(|full_string| annotation_index.map(|index| full_string[(index + 1)..].trim()))
+		.and_then(none_on_empty);
 
 	// Combine the saved roll with the additional information provided, if any
-	if !additional_command_slice.is_empty() {
+	if let Some(added_command) = additional_command_slice {
 		roll_command.insert(0, '(');
 		roll_command.push_str(") ");
-		roll_command.push_str(additional_command_slice);
+		roll_command.push_str(added_command);
 	}
-	if !additional_annotation_slice.is_empty() {
+	if let Some(added_annotation) = additional_annotation_slice {
 		roll_reason.push_str("; ");
-		roll_reason.push_str(additional_annotation_slice);
+		roll_reason.push_str(added_annotation);
 	}
 
 	// Execute the command

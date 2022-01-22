@@ -166,6 +166,12 @@ pub async fn play(
 		return Ok(());
 	};
 
+	let query_trimmed = query.trim();
+	if query_trimmed.is_empty() {
+		reply(ctx, "The query must not be empty.").await?;
+		return Ok(());
+	}
+
 	let songbird = &ctx.data().songbird;
 	let lavalink = &ctx.data().lavalink;
 
@@ -225,9 +231,9 @@ pub async fn play(
 
 	// Load the command query - if playable attachments were also with the message,
 	// the attachments are queued first
-	let query_information = lavalink.auto_search_tracks(&query).await?;
+	let query_information = lavalink.auto_search_tracks(query_trimmed).await?;
 
-	let is_url = Url::parse(query.trim()).is_ok();
+	let is_url = Url::parse(query_trimmed).is_ok();
 
 	// If the query was a URL, then it's likely a playlist where all retrieved
 	// tracks are desired - otherwise, only queue the top result
