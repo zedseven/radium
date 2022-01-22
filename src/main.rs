@@ -1,6 +1,6 @@
 // Features
-#![feature(label_break_value)]
 #![feature(int_log)]
+#![feature(label_break_value)]
 // Linting Rules
 #![warn(
 	clippy::complexity,
@@ -17,7 +17,7 @@
 	clippy::if_then_some_else_none,
 	clippy::non_ascii_literal,
 	clippy::self_named_module_files,
-	clippy::str_to_string,
+	//clippy::str_to_string, // Awaits https://github.com/kangalioo/poise/issues/39
 	clippy::undocumented_unsafe_blocks,
 	clippy::wildcard_enum_match_arm
 )]
@@ -80,7 +80,7 @@ use sponsor_block::Client as SponsorBlockClient;
 use yansi::Paint;
 
 use crate::{
-	commands::*,
+	commands::commands,
 	constants::{COMMIT_NUMBER_CHOP_LENGTH, HEADER_STYLE, PREFIX, PROGRAM_COMMIT, PROGRAM_VERSION},
 	db::init as database_init,
 	event_handlers::{LavalinkHandler, SerenityHandler},
@@ -173,7 +173,8 @@ async fn main() -> Result<(), Error> {
 
 	let mut owners = HashSet::new();
 	owners.insert(owner_id);
-	let mut options = FrameworkOptions {
+	let options = FrameworkOptions {
+		commands: commands(),
 		prefix_options: PrefixFrameworkOptions {
 			prefix: Some(PREFIX.to_owned()),
 			mention_as_prefix: true,
@@ -181,37 +182,16 @@ async fn main() -> Result<(), Error> {
 			edit_tracker: Some(EditTracker::for_timespan(Duration::from_secs(3600))),
 			..PrefixFrameworkOptions::default()
 		},
-		on_error: |e, ctx| Box::pin(on_error(e, ctx)),
+		on_error: |e| {
+			Box::pin(async {
+				on_error(e)
+					.await
+					.expect("Poise's builtin error handler encountered an error");
+			})
+		},
 		owners,
 		..FrameworkOptions::default()
 	};
-
-	// Command Initialization
-	// Utility
-	options.command(register(), |f| f);
-	options.command(set_status(), |f| f);
-	options.command(help(), |f| f);
-	options.command(about(), |f| f);
-	options.command(ping(), |f| f);
-	// Playback
-	options.command(join(), |f| f);
-	options.command(leave(), |f| f);
-	options.command(play(), |f| f);
-	options.command(skip(), |f| f);
-	options.command(pause(), |f| f);
-	options.command(resume(), |f| f);
-	options.command(seek(), |f| f);
-	options.command(clear(), |f| f);
-	options.command(now_playing(), |f| f);
-	options.command(queue(), |f| f);
-	// Chance
-	options.command(roll(), |f| f);
-	options.command(batch_roll(), |f| f);
-	options.command(save_roll(), |f| f);
-	options.command(delete_roll(), |f| f);
-	options.command(saved_rolls(), |f| f);
-	options.command(run_roll(), |f| f);
-	options.command(dice_jail(), |f| f);
 
 	// Start up the bot
 

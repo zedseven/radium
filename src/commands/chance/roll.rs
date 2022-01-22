@@ -4,7 +4,7 @@ use std::{cmp::Reverse, collections::VecDeque, num::ParseIntError, str::FromStr}
 use rand::{distributions::Uniform, thread_rng, Rng};
 
 // Constants
-const OPERATOR_SYMBOLS: [char; 10] = ['^', '*', '×', 'x', '/', '÷', '+', '-', '(', ')'];
+const OPERATOR_SYMBOLS: [char; 10] = ['^', '*', '\u{d7}', 'x', '/', '\u{f7}', '+', '-', '(', ')'];
 
 // Types
 #[derive(Debug)]
@@ -164,13 +164,13 @@ pub fn parse_roll_command(command: &str) -> Result<Vec<Evaluable>, ()> {
 				precedence: 4,
 				associates_left: false,
 			}),
-			'*' | '×' | 'x' => Some(Operator {
+			'*' | '\u{d7}' | 'x' => Some(Operator {
 				op: OperatorType::Multiply,
 				functional: true,
 				precedence: 3,
 				associates_left: true,
 			}),
-			'/' | '÷' => Some(Operator {
+			'/' | '\u{f7}' => Some(Operator {
 				op: OperatorType::Divide,
 				functional: true,
 				precedence: 3,

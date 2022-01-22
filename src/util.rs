@@ -61,7 +61,7 @@ pub fn escape_str(s: &str) -> String {
 }
 
 pub fn push_chopped_str(base: &mut String, new_str: &str, max_len: usize) {
-	const ELLIPSIS: char = '…';
+	const ELLIPSIS: char = '\u{2026}';
 
 	if new_str.len() > max_len {
 		base.push_str(escape_str(&new_str[0..(max_len - 1)]).trim_end());

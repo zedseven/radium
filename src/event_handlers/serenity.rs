@@ -38,10 +38,10 @@ async fn on_ready(ctx: SerenityContext, ready: Ready) {
 	println!("{}", HEADER_STYLE.paint("Connected guilds:"));
 	for guild in &ready.guilds {
 		let guild_data = guild
-			.id()
+			.id
 			.to_partial_guild(&ctx.http)
 			.await
-			.unwrap_or_else(|_| panic!("unable to get guild with id {}", guild.id()));
-		println!("{} - {}", guild.id().0, guild_data.name);
+			.unwrap_or_else(|_| panic!("unable to get guild with id {}", guild.id));
+		println!("{} - {}", guild.id.0, guild_data.name);
 	}
 }

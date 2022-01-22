@@ -1,7 +1,7 @@
 // Uses
 use anyhow::Context;
 use poise::{
-	builtins::{help as poise_help, register_application_commands, HelpResponseMode},
+	builtins::{help as poise_help, register_application_commands, HelpConfiguration},
 	command,
 	serenity::model::{gateway::Activity, misc::Mentionable},
 };
@@ -73,14 +73,17 @@ pub async fn help(
 	poise_help(
 		ctx,
 		command.as_deref(),
-		format!(
-			"You can also use commands with a `{0}` instead of a slash, eg. `{0}help` instead of \
-			 `/help`.\nEdit your message to the bot and the bot will edit it's response for this \
-			 help dialog.",
-			PREFIX
-		)
-		.as_str(),
-		HelpResponseMode::Ephemeral,
+		HelpConfiguration {
+			extra_text_at_bottom: format!(
+				"You can also use commands with a `{0}` instead of a slash, eg. `{0}help` instead \
+				 of `/help`.\nEdit your message to the bot and the bot will edit it's response \
+				 for this help dialog.",
+				PREFIX
+			)
+			.as_str(),
+			ephemeral: true,
+			show_context_menu_commands: false,
+		},
 	)
 	.await?;
 	Ok(())
