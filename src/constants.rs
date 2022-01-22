@@ -4,7 +4,7 @@
 // Uses
 use lazy_static::lazy_static;
 use poise::serenity::{model::id::UserId, utils::Colour};
-use sponsor_block::AcceptedCategories;
+use sponsor_block::{AcceptedActions, AcceptedCategories};
 use yansi::{Color, Style};
 
 // Constants
@@ -15,7 +15,19 @@ pub const SOURCE_LINK: &str = "https://github.com/zedseven/radium";
 pub const CREATED_DATE: &str = "2021-08-30";
 pub const PREFIX: &str = "-";
 pub const MAIN_COLOUR: Colour = Colour(0xbf5c4e);
-pub const ACCEPTED_CATEGORIES: AcceptedCategories = AcceptedCategories::all(); // We filter on use
+// https://github.com/bitflags/bitflags/issues/180#issuecomment-499302965
+pub const SPONSOR_BLOCK_ACCEPTED_CATEGORIES: AcceptedCategories =
+	AcceptedCategories::from_bits_truncate(
+		AcceptedCategories::SPONSOR.bits()
+			| AcceptedCategories::UNPAID_SELF_PROMOTION.bits()
+			| AcceptedCategories::INTERACTION_REMINDER.bits()
+			| AcceptedCategories::INTERMISSION_INTRO_ANIMATION.bits()
+			| AcceptedCategories::ENDCARDS_CREDITS.bits()
+			| AcceptedCategories::NON_MUSIC.bits(),
+	);
+pub const SPONSOR_BLOCK_ACCEPTED_ACTIONS: AcceptedActions = AcceptedActions::from_bits_truncate(
+	AcceptedActions::SKIP.bits() | AcceptedActions::MUTE.bits(),
+);
 pub const COMMIT_NUMBER_CHOP_LENGTH: usize = 8;
 
 // Operational Constants

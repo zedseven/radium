@@ -16,11 +16,16 @@ use songbird::{
 	id::{ChannelId as SongbirdChannelId, GuildId},
 	Songbird,
 };
-use sponsor_block::ActionableSegment;
+use sponsor_block::Action;
 use url::Url;
 
 use crate::{
-	constants::{ACCEPTED_CATEGORIES, MILLIS_PER_SECOND, MILLIS_PER_SECOND_F32},
+	constants::{
+		MILLIS_PER_SECOND,
+		MILLIS_PER_SECOND_F32,
+		SPONSOR_BLOCK_ACCEPTED_ACTIONS,
+		SPONSOR_BLOCK_ACCEPTED_CATEGORIES,
+	},
 	segments::SkipSegment,
 	util::{
 		chop_str,
@@ -279,23 +284,21 @@ pub async fn play(
 		let mut new_start_time = None;
 
 		// YouTube SponsorBlock integration
-		let track_segments_identifier_opt = track.info.as_ref().map(|i| &i.identifier);
+		let track_identifier_opt = track.info.as_ref().map(|i| &i.identifier);
 		let mut cache_track_with_none = true;
 		'sponsorblock: {
-			let track_segments_identifier;
-			if let Some(identifier) = track_segments_identifier_opt {
-				track_segments_identifier = identifier;
+			let track_identifier = if let Some(identifier) = track_identifier_opt {
+				identifier
 			} else {
 				break 'sponsorblock;
-			}
+			};
 
 			// If we already have the segments for this video cached, we don't need to fetch
 			// them again
 			{
 				let mut segment_data_handle = ctx.data().segment_data.lock().unwrap();
-				if let Some(Some(segments)) = segment_data_handle
-					.cached_segments
-					.get(track_segments_identifier)
+				if let Some(Some(segments)) =
+					segment_data_handle.cached_segments.get(track_identifier)
 				{
 					// Load the special start and end times if necessary
 					if !segments.is_empty() && segments[0].is_at_start {
@@ -326,7 +329,11 @@ pub async fn play(
 					if let Ok(segments) = ctx
 						.data()
 						.sponsor_block
-						.fetch_segments(&video_id, ACCEPTED_CATEGORIES)
+						.fetch_segments(
+							&video_id,
+							SPONSOR_BLOCK_ACCEPTED_CATEGORIES,
+							SPONSOR_BLOCK_ACCEPTED_ACTIONS,
+						)
 						.await
 					{
 						// Calculate the track duration
@@ -334,6 +341,7 @@ pub async fn play(
 						// Get the pertinent information and filter out segments that may be
 						// incorrect (submitted before some edit to the video length that
 						// invalidates the timecodes)
+						#[allow(clippy::wildcard_enum_match_arm)]
 						let mut skip_timecodes = segments
 							.iter()
 							.filter(|s| {
@@ -348,21 +356,16 @@ pub async fn play(
 									true
 								}
 							})
-							.filter_map(|s| match &s.segment {
-								ActionableSegment::Sponsor(t)
-								| ActionableSegment::UnpaidSelfPromotion(t)
-								| ActionableSegment::InteractionReminder(t)
-								| ActionableSegment::IntermissionIntroAnimation(t)
-								| ActionableSegment::EndcardsCredits(t)
-								| ActionableSegment::NonMusic(t) => Some(SkipSegment {
-									start: t.start,
-									end: t.end,
-									is_at_start: false,
-									is_at_end: false,
-								}),
-								ActionableSegment::Highlight(_)
-								| ActionableSegment::PreviewRecap(_)
-								| ActionableSegment::FillerTangent(_) => None,
+							.filter_map(|s| match &s.action {
+								Action::Skip(start, end) | Action::Mute(start, end) => {
+									Some(SkipSegment {
+										start: *start,
+										end: *end,
+										is_at_start: false,
+										is_at_end: false,
+									})
+								}
+								_ => None,
 							})
 							.collect::<Vec<_>>();
 						// Ensure the segments are ordered by their time in the content
@@ -428,7 +431,7 @@ pub async fn play(
 							let mut segment_data_handle = ctx.data().segment_data.lock().unwrap();
 							segment_data_handle
 								.cached_segments
-								.put(track_segments_identifier.clone(), Some(skip_timecodes));
+								.put(track_identifier.clone(), Some(skip_timecodes));
 						}
 						cache_track_with_none = false;
 					}
@@ -438,11 +441,11 @@ pub async fn play(
 		// If no segments were found, cache that fact so we don't have to check the next
 		// time the video is requested
 		if cache_track_with_none {
-			if let Some(track_segments_identifier) = track_segments_identifier_opt {
+			if let Some(track_identifier) = track_identifier_opt {
 				let mut segment_data_handle = ctx.data().segment_data.lock().unwrap();
 				segment_data_handle
 					.cached_segments
-					.put(track_segments_identifier.clone(), None);
+					.put(track_identifier.clone(), None);
 			}
 		}
 

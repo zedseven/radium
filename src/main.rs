@@ -232,9 +232,7 @@ async fn main() -> Result<(), Error> {
 		})
 		.await
 		.with_context(|| "failed to start the Lavalink client")?;
-	let sponsor_block_client = SponsorBlockClient::builder(sponsor_block_user_id)
-		.timeout(Duration::new(5, 0))
-		.build();
+	let sponsor_block_client = SponsorBlockClient::builder(sponsor_block_user_id).build();
 	// Query the SponsorBlock API for the revision number and to test if it's
 	// operational
 	print!("{} ", HEADER_STYLE.paint("SponsorBlock API:"));
