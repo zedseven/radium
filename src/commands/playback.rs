@@ -203,12 +203,13 @@ pub async fn play(
 	if let PoiseContext::Prefix(prefix_ctx) = ctx {
 		for attachment in &prefix_ctx.msg.attachments {
 			// Verify the attachment is playable
-			let playable_content = match &attachment.content_type {
-				Some(t) => t.starts_with("audio") || t.starts_with("video"),
-				None => false,
-			};
-			if !playable_content {
-				continue;
+			match &attachment.content_type {
+				Some(t) => {
+					if !t.starts_with("audio") && !t.starts_with("video") {
+						continue;
+					}
+				}
+				None => continue,
 			}
 
 			// Queue it up

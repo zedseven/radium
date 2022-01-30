@@ -50,3 +50,5 @@
       - Saved rolls should be saved to a user in a guild (so that if the bot is used in multiple DnD servers by the
       same users, the rolls are separate for their characters)
     - Queue(?)
+- Separate function implementations for `roll`, so that the slash version can have the annotation as an optional
+parameter

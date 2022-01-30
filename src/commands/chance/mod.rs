@@ -520,16 +520,25 @@ async fn execute_roll(
 				.await?;
 			} else {
 				let mut display = String::new();
+				let mut pushed = false;
 				if !slash_command {
 					display.push_str(ctx.author().mention().to_string().as_str());
+					pushed = true;
 				}
 				if let Some(annotation) = annotation_escaped {
-					display.push_str(" `");
+					if pushed {
+						display.push(' ');
+					}
+					display.push('`');
 					display.push_str(annotation.as_str());
 					display.push('`');
+					pushed = true;
 				}
 				if always_show_command_in_output || slash_command {
-					display.push_str(" - `");
+					if pushed {
+						display.push_str(" - ");
+					}
+					display.push('`');
 					display.push_str(command_slice_escaped.as_str());
 					display.push('`');
 				}
