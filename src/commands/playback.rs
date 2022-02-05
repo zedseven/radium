@@ -318,6 +318,7 @@ pub async fn play(
 			}
 
 			if let Some(info) = &track.info {
+				const TRACK_ENDING_IMPRECISION: f32 = 1.0; // Lavalink seems to round track length to the nearest second(?)
 				const SEGMENT_COMBINE_THRESHOLD: f32 = 0.35; // The maximum distance between two segments to combine
 				const SEGMENT_LENGTH_THRESHOLD: f32 = 0.5; // The minimum length a segment should be
 				const DURATION_DISCARD_THRESHOLD: f32 = 1.25; // The maximum difference from the submission video length to accept
@@ -417,14 +418,14 @@ pub async fn play(
 
 							// Set the start time for the track if there's a segment right at the
 							// beginning
-							if skip_timecodes[0].start <= SEGMENT_COMBINE_THRESHOLD {
+							if skip_timecodes[0].start < TRACK_ENDING_IMPRECISION {
 								skip_timecodes[0].is_at_start = true;
 								new_start_time =
 									Some(Duration::from_secs_f32(skip_timecodes[0].end));
 							}
 							// Set the end segment's is_at_end value if it's at the very end
 							if (track_duration - skip_timecodes[skip_timecodes_len - 1].end).abs()
-								<= SEGMENT_COMBINE_THRESHOLD
+								< TRACK_ENDING_IMPRECISION
 							{
 								skip_timecodes[skip_timecodes_len - 1].is_at_end = true;
 							}

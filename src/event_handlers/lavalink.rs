@@ -53,8 +53,8 @@ impl LavalinkEventHandler for LavalinkHandler {
 				let position_f32 = event.state.position as f32 / MILLIS_PER_SECOND_F32;
 				let mut next_segment_opt = None;
 				for segment in &guild_segments.segments {
-					// Segments at the start and end are handled by Lavalink itself -
-					// don't touch them. We also skip segments that have already passed.
+					// Segments at the start are handled by Lavalink itself - don't touch them.
+					// We also skip segments that have already passed.
 					if segment.is_at_start || segment.end - SEGMENT_END_EPSILON <= position_f32 {
 						continue;
 					}
@@ -63,7 +63,7 @@ impl LavalinkEventHandler for LavalinkHandler {
 				}
 				if let Some(next_segment) = next_segment_opt {
 					let mut time_until_segment = next_segment.start - position_f32;
-					if time_until_segment <= UPDATE_DELAY_PERIOD {
+					if time_until_segment < UPDATE_DELAY_PERIOD {
 						// Verify the segment we're looking at is for the current track
 						// We check this here and not sooner because it requires fetching the
 						// current node for Lavalink, so we don't want to do that every update
@@ -71,14 +71,20 @@ impl LavalinkEventHandler for LavalinkHandler {
 							.nodes()
 							.await
 							.get(&event.guild_id.0)
-							.unwrap()
+							.expect(
+								"there should always be a node for the guild that received a \
+								 `player_update` event",
+							)
 							.now_playing
 							.as_ref()
-							.unwrap()
+							.expect(
+								"there should always be a `now_playing` track within the \
+								 `player_update` event",
+							)
 							.track
 							.info
 							.as_ref()
-							.expect("Playing track is missing all info")
+							.expect("playing track is missing all info")
 							.identifier
 							.clone();
 						if !current_track_identifier.eq(guild_segments.track_identifier.as_str()) {
