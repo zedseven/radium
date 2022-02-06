@@ -39,8 +39,8 @@ pub struct GuildSegments {
 pub struct SkipSegment {
 	pub start: f32,
 	pub end: f32,
-	// Start and end segments should still be cacheable, but shouldn't be considered by the
-	// mid-playback skipping
+	// Start segments should still be cacheable, but shouldn't be considered by the mid-playback
+	// skipping
 	pub is_at_start: bool,
 	pub is_at_end: bool,
 }

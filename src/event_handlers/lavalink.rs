@@ -67,26 +67,28 @@ impl LavalinkEventHandler for LavalinkHandler {
 						// Verify the segment we're looking at is for the current track
 						// We check this here and not sooner because it requires fetching the
 						// current node for Lavalink, so we don't want to do that every update
-						let current_track_identifier = client
-							.nodes()
-							.await
-							.get(&event.guild_id.0)
-							.expect(
-								"there should always be a node for the guild that received a \
-								 `player_update` event",
-							)
-							.now_playing
-							.as_ref()
-							.expect(
-								"there should always be a `now_playing` track within the \
-								 `player_update` event",
-							)
-							.track
-							.info
-							.as_ref()
-							.expect("playing track is missing all info")
-							.identifier
-							.clone();
+						let current_track_identifier = {
+							client
+								.nodes()
+								.await
+								.get(&event.guild_id.0)
+								.expect(
+									"there should always be a node for the guild that received a \
+									 `player_update` event",
+								)
+								.now_playing
+								.as_ref()
+								.expect(
+									"there should always be a `now_playing` track within the \
+									 `player_update` event",
+								)
+								.track
+								.info
+								.as_ref()
+								.expect("playing track is missing all info")
+								.identifier
+								.clone()
+						};
 						if !current_track_identifier.eq(guild_segments.track_identifier.as_str()) {
 							change_guild_track = Some(Some(current_track_identifier));
 							break 'seek_block;

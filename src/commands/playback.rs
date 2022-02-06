@@ -883,9 +883,13 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 
 	let lavalink = &ctx.data().lavalink;
 
-	let mut something_playing = false;
-	if let Some(node) = lavalink.nodes().await.get(&guild_id.0) {
-		if let Some(now_playing) = &node.now_playing {
+	let now_playing_opt = if let Some(node) = lavalink.nodes().await.get(&guild_id.0) {
+		node.now_playing.clone()
+	} else {
+		None
+	};
+	match now_playing_opt {
+		Some(now_playing) => {
 			let track_info = now_playing.track.info.as_ref().unwrap();
 			let track_segments = {
 				let mut segment_data_handle = ctx.data().segment_data.lock().unwrap();
@@ -938,11 +942,10 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 				e
 			})
 			.await?;
-			something_playing = true;
 		}
-	}
-	if !something_playing {
-		reply(ctx, "Nothing is playing at the moment.").await?;
+		None => {
+			reply(ctx, "Nothing is playing at the moment.").await?;
+		}
 	}
 
 	Ok(())
