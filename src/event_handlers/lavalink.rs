@@ -1,7 +1,7 @@
 // Uses
 use std::{
 	sync::{Arc, Mutex},
-	time::Duration,
+	time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use lavalink_rs::{
@@ -12,7 +12,7 @@ use lavalink_rs::{
 use poise::serenity::async_trait;
 use tokio::time::{sleep, Instant};
 
-use crate::{constants::MILLIS_PER_SECOND_F32, segments::GuildSegments, DataArc};
+use crate::{constants::MILLIS_PER_SECOND_F32, segments::TrackSegments, DataArc};
 
 // The event handler for all Lavalink events
 pub struct LavalinkHandler {
@@ -26,16 +26,36 @@ impl LavalinkEventHandler for LavalinkHandler {
 		let identifier = client
 			.decode_track(event.track)
 			.await
-			.expect("Unable to decode event track string")
+			.expect("unable to decode event track string")
 			.identifier;
 		update_segment_data(&self.data, event.guild_id, Some(identifier));
 	}
 
-	// During video playback, check regularly if we're close to a segment to skip
+	/// During track playback, check regularly if we're close to a segment to
+	/// skip.
 	async fn player_update(&self, client: LavalinkClient, event: PlayerUpdate) {
+		const UPDATE_INVALIDATION_MINIMUM: i64 = 200; // The amount of time before an update event should be considered invalid
 		const UPDATE_DELAY_PERIOD: f32 = 5.0; // Number of seconds between updates
 		const SEEK_DELAY: f32 = 0.085; // The amount of delay that seek operations have before completing
 		const SEGMENT_END_EPSILON: f32 = 0.1; // A bit of extra 'fuzz' to prevent re-seeking to the same segment
+
+		// Since this update happens within a synchronous context, check to see if the
+		// received event is no longer valid. (the start of this function has been
+		// delayed, and another update likely already skipped)
+		let current_system_millis = SystemTime::now()
+			.duration_since(UNIX_EPOCH)
+			.expect("time went backwards")
+			.as_millis() as i64;
+		if current_system_millis - event.state.time >= UPDATE_INVALIDATION_MINIMUM {
+			println!(
+				"Current system time ({}) is greater than the event time ({}) by {} millis. \
+				 Exiting.",
+				current_system_millis,
+				event.state.time,
+				current_system_millis - event.state.time
+			);
+			return;
+		}
 
 		let event_start_time = Instant::now();
 
@@ -61,6 +81,8 @@ impl LavalinkEventHandler for LavalinkHandler {
 					next_segment_opt = Some(segment);
 					break;
 				}
+
+				// Process the upcoming segment if it's present
 				if let Some(next_segment) = next_segment_opt {
 					let mut time_until_segment = next_segment.start - position_f32;
 					if time_until_segment < UPDATE_DELAY_PERIOD {
@@ -166,7 +188,7 @@ fn update_segment_data(
 		{
 			segment_data_handle.active_segments.insert(
 				guild_id,
-				GuildSegments {
+				TrackSegments {
 					track_identifier: new_track_name,
 					segments: new_segments,
 				},

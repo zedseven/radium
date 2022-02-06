@@ -9,7 +9,7 @@ use crate::constants::VIDEO_SEGMENT_CACHE_SIZE;
 // Definitions
 #[derive(Debug)]
 pub struct SegmentData {
-	pub active_segments: HashMap<GuildId, GuildSegments>,
+	pub active_segments: HashMap<GuildId, TrackSegments>,
 	// This will have a problem if we're inserting close to or more than CACHE_SIZE entries before
 	// tracks can be finished, but this isn't a pressing issue by any means. A solution to that
 	// would be to support mandatory values that can not be removed from the cache until we're done
@@ -30,7 +30,7 @@ impl SegmentData {
 // This is kind of a backwards implementation, but it's done this way so that we
 // don't have to constantly query what's currently playing in Lavalink
 #[derive(Debug, Clone)]
-pub struct GuildSegments {
+pub struct TrackSegments {
 	pub track_identifier: String,
 	pub segments: Vec<SkipSegment>,
 }
