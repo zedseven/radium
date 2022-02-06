@@ -34,10 +34,15 @@ impl LavalinkEventHandler for LavalinkHandler {
 	/// During track playback, check regularly if we're close to a segment to
 	/// skip.
 	async fn player_update(&self, client: LavalinkClient, event: PlayerUpdate) {
-		const UPDATE_INVALIDATION_MINIMUM: i64 = 200; // The amount of time before an update event should be considered invalid
-		const UPDATE_DELAY_PERIOD: f32 = 5.0; // Number of seconds between updates
-		const SEEK_DELAY: f32 = 0.085; // The amount of delay that seek operations have before completing
-		const SEGMENT_END_EPSILON: f32 = 0.1; // A bit of extra 'fuzz' to prevent re-seeking to the same segment
+		/// The amount of time before an update event should be considered
+		/// invalid.
+		const UPDATE_INVALIDATION_MINIMUM: i64 = 200;
+		/// The number of seconds between updates.
+		const UPDATE_DELAY_PERIOD: f32 = 5.0;
+		/// The amount of delay that seek operations have before completing.
+		const SEEK_DELAY: f32 = 0.085;
+		/// A bit of extra 'fuzz' to prevent re-seeking to the same segment.
+		const SEGMENT_END_EPSILON: f32 = 0.1;
 
 		// Since this update happens within a synchronous context, check to see if the
 		// received event is no longer valid. (the start of this function has been

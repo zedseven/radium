@@ -318,10 +318,14 @@ pub async fn play(
 			}
 
 			if let Some(info) = &track.info {
-				const TRACK_ENDING_IMPRECISION: f32 = 1.0; // Lavalink seems to round track length to the nearest second(?)
-				const SEGMENT_COMBINE_THRESHOLD: f32 = 0.35; // The maximum distance between two segments to combine
-				const SEGMENT_LENGTH_THRESHOLD: f32 = 0.5; // The minimum length a segment should be
-				const DURATION_DISCARD_THRESHOLD: f32 = 1.25; // The maximum difference from the submission video length to accept
+				// Lavalink seems to round track length to the nearest second(?).
+				const TRACK_ENDING_IMPRECISION: f32 = 1.0;
+				// The maximum distance between two segments to combine.
+				const SEGMENT_COMBINE_THRESHOLD: f32 = 0.35;
+				// The minimum length a segment should be.
+				const SEGMENT_LENGTH_THRESHOLD: f32 = 0.5;
+				// The maximum difference from the submission video length to accept.
+				const DURATION_DISCARD_THRESHOLD: f32 = 1.25;
 
 				// No point if it's a stream
 				if !info.is_seekable {
