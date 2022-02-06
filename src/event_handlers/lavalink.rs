@@ -21,16 +21,6 @@ pub struct LavalinkHandler {
 
 #[async_trait]
 impl LavalinkEventHandler for LavalinkHandler {
-	// Update the active segments info for new tracks
-	async fn track_start(&self, client: LavalinkClient, event: TrackStart) {
-		let identifier = client
-			.decode_track(event.track)
-			.await
-			.expect("unable to decode event track string")
-			.identifier;
-		update_segment_data(&self.data, event.guild_id, Some(identifier));
-	}
-
 	/// During track playback, check regularly if we're close to a segment to
 	/// skip.
 	async fn player_update(&self, client: LavalinkClient, event: PlayerUpdate) {
@@ -148,6 +138,16 @@ impl LavalinkEventHandler for LavalinkHandler {
 		if let Some(change_active_track) = change_guild_track {
 			update_segment_data(&self.data, event.guild_id, change_active_track);
 		}
+	}
+
+	// Update the active segments info for new tracks
+	async fn track_start(&self, client: LavalinkClient, event: TrackStart) {
+		let identifier = client
+			.decode_track(event.track)
+			.await
+			.expect("unable to decode event track string")
+			.identifier;
+		update_segment_data(&self.data, event.guild_id, Some(identifier));
 	}
 
 	// Automatically skip if a track is stuck
