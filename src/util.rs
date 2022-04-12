@@ -19,10 +19,7 @@ use crate::{
 };
 
 // Functions
-pub async fn reply<S: ToString>(
-	ctx: PoiseContext<'_>,
-	msg: S,
-) -> Result<Option<ReplyHandle<'_>>, Error> {
+pub async fn reply<S: ToString>(ctx: PoiseContext<'_>, msg: S) -> Result<ReplyHandle<'_>, Error> {
 	send_reply(ctx, |m| m.embed(|e| e.colour(MAIN_COLOUR).description(msg)))
 		.await
 		.with_context(|| "failed to send message")
@@ -31,7 +28,7 @@ pub async fn reply<S: ToString>(
 pub async fn reply_plain<S: ToString>(
 	ctx: PoiseContext<'_>,
 	msg: S,
-) -> Result<Option<ReplyHandle<'_>>, Error> {
+) -> Result<ReplyHandle<'_>, Error> {
 	send_reply(ctx, |m| m.content(msg.to_string()))
 		.await
 		.with_context(|| "failed to send message")
@@ -40,7 +37,7 @@ pub async fn reply_plain<S: ToString>(
 pub async fn reply_embed(
 	ctx: PoiseContext<'_>,
 	embed: impl FnOnce(&mut CreateEmbed) -> &mut CreateEmbed,
-) -> Result<Option<ReplyHandle<'_>>, Error> {
+) -> Result<ReplyHandle<'_>, Error> {
 	send_reply(ctx, |m| m.embed(|e| embed(e.colour(MAIN_COLOUR))))
 		.await
 		.with_context(|| "failed to send message")

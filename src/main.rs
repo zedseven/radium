@@ -17,7 +17,7 @@
 	clippy::if_then_some_else_none,
 	clippy::non_ascii_literal,
 	clippy::self_named_module_files,
-	//clippy::str_to_string, // Awaits https://github.com/kangalioo/poise/issues/39
+	clippy::str_to_string,
 	clippy::undocumented_unsafe_blocks,
 	clippy::wildcard_enum_match_arm
 )]
@@ -69,7 +69,7 @@ use dotenv::dotenv;
 use lavalink_rs::LavalinkClient;
 use poise::{
 	builtins::on_error,
-	serenity::{self, client::parse_token, http::Http, model::id::GuildId},
+	serenity::{self, http::Http, model::id::GuildId, utils::parse_token},
 	EditTracker,
 	Framework,
 	FrameworkOptions,
@@ -138,15 +138,20 @@ async fn main() -> Result<(), Error> {
 	);
 
 	// Prepare basic bot information
-	let token = var(DISCORD_TOKEN_VAR).with_context(|| {
+	let raw_token = var(DISCORD_TOKEN_VAR).with_context(|| {
 		format!(
 			"expected the discord token in the environment variable {}",
 			DISCORD_TOKEN_VAR
 		)
 	})?;
-	let app_id = parse_token(&token)
+	let token = if raw_token.starts_with("Bot ") || raw_token.starts_with("Bearer ") {
+		raw_token.to_string()
+	} else {
+		format!("Bot {}", raw_token)
+	};
+	let app_id = parse_token(&raw_token)
 		.with_context(|| "token is invalid".to_owned())?
-		.bot_user_id;
+		.0;
 
 	let sponsor_block_user_id = var(SPONSOR_BLOCK_USER_ID_VAR).with_context(|| {
 		format!(
@@ -155,7 +160,7 @@ async fn main() -> Result<(), Error> {
 		)
 	})?;
 
-	let http = Http::new_with_token(&token);
+	let http = Http::new(&token);
 	let owner_id = http
 		.get_current_application_info()
 		.await
