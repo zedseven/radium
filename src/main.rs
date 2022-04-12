@@ -69,7 +69,12 @@ use dotenv::dotenv;
 use lavalink_rs::LavalinkClient;
 use poise::{
 	builtins::on_error,
-	serenity::{self, http::Http, model::id::GuildId, utils::parse_token},
+	serenity::{
+		self,
+		http::Http,
+		model::{gateway::GatewayIntents, id::GuildId},
+		utils::parse_token,
+	},
 	EditTracker,
 	Framework,
 	FrameworkOptions,
@@ -257,6 +262,7 @@ async fn main() -> Result<(), Error> {
 		.token(&token)
 		.client_settings(|client_builder| {
 			client_builder
+				.intents(GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT)
 				.raw_event_handler(SerenityHandler)
 				.register_songbird_with(songbird)
 		})
