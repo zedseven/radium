@@ -41,7 +41,7 @@ libsqlite3-sys = { version = "0.22", default-features = false, features = ["bund
 
 [build-dependencies]
 anyhow = "1.0"
-vergen = { version = "6.0", default-features = false, features = ["git"] }
+vergen = { version = "7.0", default-features = false, features = ["git"] }
 
 [patch.crates-io]
 serenity = { git = "https://github.com/serenity-rs/serenity", branch = "next" }
