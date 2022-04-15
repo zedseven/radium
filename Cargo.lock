@@ -729,7 +729,7 @@ dependencies = [
 [[package]]
 name = "lavalink-rs"
 version = "0.9.0-rc.3"
-source = "git+https://gitlab.com/vicky5124/lavalink-rs#491228e60d4471b12d9764f42075de1e3eeb93af"
+source = "git+https://gitlab.com/vicky5124/lavalink-rs#625bf3ad57a208469a8fa940381346d6d21dd09b"
 dependencies = [
  "async-trait",
  "async-tungstenite",
@@ -1583,7 +1583,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.10.10"
-source = "git+https://github.com/serenity-rs/serenity?branch=next#85e0c30171745eff3d33a88363c67ced5d12b175"
+source = "git+https://github.com/serenity-rs/serenity?branch=next#2bb9a01bfccd0485ccb7e9f20cce8edff7426eb3"
 dependencies = [
  "async-trait",
  "async-tungstenite",
