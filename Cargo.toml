@@ -18,6 +18,7 @@ parse_duration = "2.1"
 poise = { git = "https://github.com/GnomedDev/poise", branch = "update-serenity" } # Temporary until https://github.com/kangalioo/poise/pull/60 is merged
 rand = "0.8"
 regex = "1.5"
+shuffle = "0.1"
 sponsor-block = { git = "https://github.com/zedseven/sponsor-block-rs", branch = "dev" }
 tokio = { version = "1.17", features = ["macros", "rt-multi-thread"] }
 url = "2.2"

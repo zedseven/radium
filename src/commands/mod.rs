@@ -20,6 +20,7 @@ pub fn commands() -> Vec<Command<DataArc, Error>> {
 		join(),
 		leave(),
 		play(),
+		play_shuffled(),
 		skip(),
 		pause(),
 		resume(),

@@ -12,6 +12,8 @@ use poise::{
 		misc::Mentionable,
 	},
 };
+use rand::thread_rng;
+use shuffle::{irs::Irs, shuffler::Shuffler};
 use songbird::{
 	id::{ChannelId as SongbirdChannelId, GuildId},
 	Songbird,
@@ -144,7 +146,7 @@ pub async fn leave(ctx: PoiseContext<'_>) -> Result<(), Error> {
 
 /// Queue up a song or playlist from YouTube, Twitch, Vimeo, SoundCloud, etc.
 ///
-/// Spotify is sadly not supported.
+/// Spotify is only supported with [a Lavalink plugin](https://github.com/Topis-Lavalink-Plugins/Topis-Source-Managers-Plugin).
 ///
 /// If Radium is provided with a URL, it will queue up all tracks it finds.
 /// Otherwise it will search the query on YouTube and queue up the first result.
@@ -159,6 +161,31 @@ pub async fn play(
 	#[description = "What to play."]
 	query: String,
 ) -> Result<(), Error> {
+	play_internal(ctx, query.as_str(), false).await
+}
+
+/// Play a playlist, shuffled.
+///
+/// This is identical to the `play` command, except that it shuffles the tracks
+/// before playing.
+#[command(
+	prefix_command,
+	slash_command,
+	category = "Playback",
+	rename = "shuffleplay",
+	aliases("sp", "ps", "playshuffled")
+)]
+pub async fn play_shuffled(
+	ctx: PoiseContext<'_>,
+	#[rest]
+	#[description = "What to play."]
+	query: String,
+) -> Result<(), Error> {
+	play_internal(ctx, query.as_str(), true).await
+}
+
+/// The internal implementation of `play` and `play_shuffled`.
+async fn play_internal(ctx: PoiseContext<'_>, query: &str, shuffle: bool) -> Result<(), Error> {
 	let guild = if let Some(guild) = ctx.guild() {
 		guild
 	} else {
@@ -283,6 +310,16 @@ pub async fn play(
 				None => None,
 			};
 		}
+	}
+
+	// Shuffle if necessary
+	if query_tracks > 1 && shuffle {
+		let mut rng = thread_rng();
+		let mut inverse_riffle_shuffler = Irs::default();
+		inverse_riffle_shuffler
+			.shuffle(&mut queueable_tracks, &mut rng)
+			.ok(); // Ignore the error here because if the shuffle fails (which it never
+		 // should) we want to continue
 	}
 
 	// Queue the tracks up
@@ -532,6 +569,7 @@ pub async fn play(
 
 	Ok(())
 }
+/// Parses out the YouTube video ID from a video URL.
 fn get_youtube_video_id(uri: &Url) -> Option<String> {
 	if let Some(host) = uri.host_str() {
 		if host.ends_with("youtube.com") {
