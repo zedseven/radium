@@ -1,0 +1,47 @@
+name: Artifacts
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install `nightly` toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          override: true
+
+      - name: Restore cache
+        uses: Swatinem/rust-cache@v1
+
+      - name: Cargo Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: Release Binary (${{ matrix.os }})
+          path: |
+            target/release/radium
+            target/release/radium.exe
+          if-no-files-found: error
