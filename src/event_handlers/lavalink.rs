@@ -153,16 +153,25 @@ impl LavalinkEventHandler for LavalinkHandler {
 	// Automatically skip if a track is stuck
 	async fn track_stuck(&self, client: LavalinkClient, event: TrackStuck) {
 		println!("A currently-playing track is stuck. Skipping.");
-		dbg!(&event);
+		#[allow(clippy::dbg_macro)]
+		{
+			dbg!(&event);
+		}
 		client.skip(event.guild_id).await;
 	}
 
 	async fn websocket_closed(&self, _client: LavalinkClient, event: WebSocketClosed) {
-		dbg!(&event);
+		#[allow(clippy::dbg_macro)]
+		{
+			dbg!(&event);
+		}
 	}
 
 	async fn player_destroyed(&self, _client: LavalinkClient, event: PlayerDestroyed) {
-		dbg!(&event);
+		#[allow(clippy::dbg_macro)]
+		{
+			dbg!(&event);
+		}
 	}
 }
 
