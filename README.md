@@ -14,9 +14,13 @@ widespread use.
 - [Serenity](https://github.com/serenity-rs/serenity)
 - [Songbird](https://github.com/serenity-rs/songbird)
 - [Lavalink](https://github.com/freyacodes/Lavalink) (with the [lavalink-rs](https://gitlab.com/vicky5124/lavalink-rs) Rust wrapper).
+  - [Topi's Source Managers Plugin](https://github.com/Topis-Lavalink-Plugins/Topis-Source-Managers-Plugin) for additional music service support (Spotify, Apple Music)
+  - [DuncteBot Lavalink Plugin](https://github.com/DuncteBot/skybot-lavalink-plugin) for text-to-speech support
 - [Diesel](https://diesel.rs/)
 - [SQLite](https://sqlite.org/index.html)
 - [SponsorBlock](https://sponsor.ajay.app/) (with my [sponsor-block-rs](https://github.com/zedseven/sponsor-block-rs) Rust wrapper).
+
+(Lavalink and its associated plugins need to be installed and set up separately - this bot just interfaces with them)
 
 ## SponsorBlock Integration
 While playing videos from YouTube, the bot will automatically skip sponsored segments,

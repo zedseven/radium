@@ -6,10 +6,12 @@
 2. Install 3rd-party dependencies (Linux-only):
    1. Install `build-essentials` or similar (dependent on your platform)
    2. OpenSSL
-      - As Rust instructs, `libssl-dev` or `openssl-dev` 
+      - As Rust instructs, `libssl-dev` or `openssl-dev`
    3. libsqlite3
       - `libsqlite3-dev` seemed to do the trick
 3. Build!
    - `cargo build --release`
 
 You will also need to set up and configure LavaLink to use any audio-related commands.
+
+Some features (TTS, Spotify support) require additional Lavalink plugins. See [README.md](README.md) for more information.
