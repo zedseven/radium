@@ -1209,7 +1209,7 @@ checksum = "1df8c4ec4b0627e53bdf214615ad287367e482558cf84b109250b37464dc03ae"
 [[package]]
 name = "poise"
 version = "0.1.0"
-source = "git+https://github.com/GnomedDev/poise?branch=update-serenity#9c63f06f541dd9a04bcc7d0ac3bfafbff769ecbc"
+source = "git+https://github.com/kangalioo/poise?branch=develop#95272a41730505ff760772a5681326923067776c"
 dependencies = [
  "async-trait",
  "derivative",
@@ -1226,7 +1226,7 @@ dependencies = [
 [[package]]
 name = "poise_macros"
 version = "0.1.0"
-source = "git+https://github.com/GnomedDev/poise?branch=update-serenity#9c63f06f541dd9a04bcc7d0ac3bfafbff769ecbc"
+source = "git+https://github.com/kangalioo/poise?branch=develop#95272a41730505ff760772a5681326923067776c"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -1315,7 +1315,6 @@ dependencies = [
  "poise",
  "rand",
  "regex",
- "serenity",
  "shuffle",
  "songbird",
  "sponsor-block",
@@ -1606,7 +1605,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.10.10"
-source = "git+https://github.com/serenity-rs/serenity?branch=next#720ab1179d811270ce65d3561da5f9b90384d3cd"
+source = "git+https://github.com/serenity-rs//serenity?rev=2bb9a01bfccd0485ccb7e9f20cce8edff7426eb3#2bb9a01bfccd0485ccb7e9f20cce8edff7426eb3"
 dependencies = [
  "async-trait",
  "async-tungstenite",

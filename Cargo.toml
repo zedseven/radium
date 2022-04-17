@@ -15,7 +15,7 @@ lavalink-rs = { git = "https://gitlab.com/vicky5124/lavalink-rs", features = ["r
 lazy_static = "1.4"
 lru = "0.7"
 parse_duration = "2.1"
-poise = { git = "https://github.com/GnomedDev/poise", branch = "update-serenity" } # Temporary until https://github.com/kangalioo/poise/pull/60 is merged
+poise = { git = "https://github.com/kangalioo/poise", branch = "develop" } # Remember when updating this, to also update the pinned serenity revisions below
 rand = "0.8"
 regex = "1.5"
 shuffle = "0.1"
@@ -23,12 +23,6 @@ sponsor-block = { git = "https://github.com/zedseven/sponsor-block-rs", branch =
 tokio = { version = "1.17", features = ["macros", "rt-multi-thread"] }
 url = "2.2"
 yansi = "0.5"
-
-[dependencies.serenity]
-git = "https://github.com/serenity-rs/serenity"
-branch = "next"
-default-features = false
-features = ["builder", "cache", "client", "gateway", "model", "utils", "rustls_backend", "unstable_discord_api", "collector"]
 
 [dependencies.songbird]
 git = "https://github.com/serenity-rs/songbird"
@@ -45,5 +39,9 @@ anyhow = "1.0"
 vergen = { version = "7.0", default-features = false, features = ["git"] }
 
 [patch.crates-io]
-serenity = { git = "https://github.com/serenity-rs/serenity", branch = "next" }
+serenity = { git = "https://github.com/serenity-rs//serenity", rev = "2bb9a01bfccd0485ccb7e9f20cce8edff7426eb3" }
 songbird = { git = "https://github.com/serenity-rs/songbird", branch = "next" }
+
+[patch.'https://github.com/serenity-rs/serenity']
+# The double-slash is because of a downright-stupid Cargo issue: https://github.com/rust-lang/cargo/issues/7670
+serenity = { git = "https://github.com/serenity-rs//serenity", rev = "2bb9a01bfccd0485ccb7e9f20cce8edff7426eb3" }

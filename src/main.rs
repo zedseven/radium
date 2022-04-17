@@ -260,9 +260,9 @@ async fn main() -> Result<(), Error> {
 	Framework::build()
 		.options(options)
 		.token(&token)
+		.intents(GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT)
 		.client_settings(|client_builder| {
 			client_builder
-				.intents(GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT)
 				.raw_event_handler(SerenityHandler)
 				.register_songbird_with(songbird)
 		})
