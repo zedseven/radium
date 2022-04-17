@@ -35,7 +35,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release
+          args: --release --features tts
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3

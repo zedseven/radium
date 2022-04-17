@@ -1,6 +1,6 @@
 [package]
 name = "radium"
-version = "1.10.0"
+version = "1.11.0"
 authors = ["Zacchary Dempsey-Plante <zacc@ztdp.ca>"]
 edition = "2021"
 license = "GPL-3.0-or-later"
@@ -45,3 +45,7 @@ songbird = { git = "https://github.com/serenity-rs/songbird", branch = "next" }
 [patch.'https://github.com/serenity-rs/serenity']
 # The double-slash is because of a downright-stupid Cargo issue: https://github.com/rust-lang/cargo/issues/7670
 serenity = { git = "https://github.com/serenity-rs//serenity", rev = "2bb9a01bfccd0485ccb7e9f20cce8edff7426eb3" }
+
+[features]
+default = []
+tts = []

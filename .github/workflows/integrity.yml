@@ -57,4 +57,4 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -- -D warnings -A unused
+          args: --features tts -- -D warnings -A unused

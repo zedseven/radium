@@ -7,7 +7,7 @@ use poise::{
 	command,
 	serenity::model::{
 		guild::Guild,
-		id::{ChannelId, UserId},
+		id::{ChannelId, GuildId, UserId},
 		misc::Mentionable,
 	},
 };
@@ -589,6 +589,7 @@ fn get_youtube_video_id(uri: &Url) -> Option<String> {
 	category = "Playback",
 	aliases("texttospeech", "say", "speak")
 )]
+#[cfg(feature = "tts")]
 pub async fn tts(
 	ctx: PoiseContext<'_>,
 	#[rest]
@@ -596,7 +597,34 @@ pub async fn tts(
 	message: String,
 ) -> Result<(), Error> {
 	// Constants
-	const CHARACTER_LIMIT: usize = 200; // Seems to be a limit in Lavalink
+	/// The limit in Lavalink seems to be 200 - this is to include a buffer
+	const MAX_SINGLE_FRAGMENT_SIZE: usize = 185;
+
+	async fn queue_fragment(
+		ctx: PoiseContext<'_>,
+		guild_id: GuildId,
+		fragment: &str,
+	) -> Result<(), Error> {
+		let lavalink = &ctx.data().lavalink;
+
+		// Fetch the fragment
+		let tts_result = lavalink.get_tracks(format!("speak:{}", fragment)).await?;
+		if tts_result.tracks.is_empty() {
+			reply(ctx, "TTS failed.").await?;
+			return Ok(());
+		}
+
+		// Queue it
+		let mut queueable = lavalink.play(guild_id, tts_result.tracks[0].clone());
+		queueable.requester(ctx.author().id.0);
+		if let Err(e) = queueable.queue().await {
+			reply(ctx, "Failed to queue up query result.").await?;
+			eprintln!("Failed to queue up query result: {}", e);
+			return Ok(());
+		};
+
+		Ok(())
+	}
 
 	// Sanitisation
 	let message_trimmed = message.trim();
@@ -604,51 +632,72 @@ pub async fn tts(
 		reply(ctx, "Your message cannot be empty.").await?;
 		return Ok(());
 	}
-	if message_trimmed.len() > CHARACTER_LIMIT {
+	/*if message_trimmed.len() > MAX_SINGLE_FRAGMENT_SIZE {
 		reply(
 			ctx,
 			format!(
 				"Your message must be less than {} characters long.",
-				CHARACTER_LIMIT
+				MAX_SINGLE_FRAGMENT_SIZE
 			),
 		)
 		.await?;
 		return Ok(());
-	}
+	}*/
 
-	// Queue it up
+	// Join the channel and set up
 	let guild = match join_internal(ctx, false).await {
 		Ok(guild_result) => guild_result,
 		Err(_) => return Ok(()),
 	};
 
-	let lavalink = &ctx.data().lavalink;
+	// Queue it up
+	let mut queued_tracks = 0;
+	let mut message_buffer = String::with_capacity(MAX_SINGLE_FRAGMENT_SIZE);
+	for word in message_trimmed.split_whitespace() {
+		// Catch the edge case of a long string with no whitespace
+		if word.len() > MAX_SINGLE_FRAGMENT_SIZE {
+			reply(
+				ctx,
+				format!(
+					"A single word cannot be longer than {} characters.",
+					MAX_SINGLE_FRAGMENT_SIZE
+				),
+			)
+			.await?;
+			return Ok(());
+		}
 
-	let tts_result = lavalink
-		.get_tracks(format!("speak:{}", message_trimmed))
-		.await?;
-	if tts_result.tracks.is_empty() {
-		reply(ctx, "TTS failed.").await?;
-		return Ok(());
+		// If the buffer is full, queue it up and flush it
+		if message_buffer.len() + word.len() > MAX_SINGLE_FRAGMENT_SIZE {
+			queue_fragment(ctx, guild.id, message_buffer.trim_end()).await?;
+			message_buffer.clear();
+			queued_tracks += 1;
+		}
+
+		// Push the next word onto the buffer
+		message_buffer.push_str(word);
+		message_buffer.push(' '); // Technically this isn't accounted for above, but we
+		                  // have a buffer between our fragment limit and the
+		                  // actual limit anyways
 	}
-
-	let mut queueable = lavalink.play(guild.id, tts_result.tracks[0].clone());
-	queueable.requester(ctx.author().id.0);
-	if let Err(e) = queueable.queue().await {
-		reply(ctx, "Failed to queue up query result.").await?;
-		eprintln!("Failed to queue up query result: {}", e);
-		return Ok(());
-	};
+	// Queue up whatever is remaining
+	if !message_buffer.is_empty() {
+		queue_fragment(ctx, guild.id, message_buffer.trim_end()).await?;
+		queued_tracks += 1;
+	}
 
 	// Update the queued count for the guild
 	{
 		let mut hash_map = ctx.data().queued_count.lock().unwrap();
 		let queued_count = hash_map.entry(guild.id).or_default();
-		*queued_count += 1;
+		*queued_count += queued_tracks;
 	}
 
 	// Response
-	reply(ctx, format!("Added to queue: \"{}\"", message_trimmed)).await?;
+	let mut response = String::from("Added to queue: \"");
+	push_chopped_str(&mut response, message_trimmed, MAX_SINGLE_FRAGMENT_SIZE);
+	response.push('"');
+	reply(ctx, response).await?;
 
 	Ok(())
 }

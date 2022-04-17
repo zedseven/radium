@@ -84,7 +84,7 @@ pub fn push_chopped_str(base: &mut String, new_str: &str, max_len: usize) {
 }
 
 pub fn chop_str(s: &str, max_len: usize) -> String {
-	let mut base = String::new();
+	let mut base = String::with_capacity(max_len);
 	push_chopped_str(&mut base, s, max_len);
 	base
 }
