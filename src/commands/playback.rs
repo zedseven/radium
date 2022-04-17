@@ -2,7 +2,6 @@
 use std::time::Duration;
 
 use anyhow::Context;
-use lavalink_rs::LavalinkClient;
 use parse_duration::parse as parse_duration;
 use poise::{
 	command,
@@ -14,10 +13,6 @@ use poise::{
 };
 use rand::thread_rng;
 use shuffle::{irs::Irs, shuffler::Shuffler};
-use songbird::{
-	id::{ChannelId as SongbirdChannelId, GuildId},
-	Songbird,
-};
 use sponsor_block::Action;
 use url::Url;
 
@@ -30,12 +25,13 @@ use crate::{
 	},
 	segments::SkipSegment,
 	util::{
-		chop_str,
+		create_linked_title,
 		display_timecode,
 		display_timecode_f32,
 		push_chopped_str,
 		reply,
 		reply_embed,
+		uri_is_url,
 	},
 	Error,
 	PoiseContext,
@@ -50,25 +46,60 @@ const UNKNOWN_TITLE: &str = "Unknown title";
 const LIVE_INDICATOR: &str = "\u{1f534} **LIVE**";
 
 // Functions
-async fn join_internal<G, C>(
-	songbird: &Songbird,
-	lavalink: &LavalinkClient,
-	guild_id: G,
-	channel_id: C,
-) -> Result<(), Error>
-where
-	G: Into<GuildId>,
-	C: Into<SongbirdChannelId>,
-{
-	let (_, handler) = songbird.join_gateway(guild_id, channel_id).await;
-
-	match handler {
-		Ok(connection_info) => Ok(lavalink
-			.create_session_with_songbird(&connection_info)
+async fn join_internal(ctx: PoiseContext<'_>, announce_success: bool) -> Result<Guild, ()> {
+	let guild = if let Some(guild) = ctx.guild() {
+		guild
+	} else {
+		reply(ctx, "You must use this command from within a server.")
 			.await
-			.map_err(Box::new)?),
-		Err(e) => Err(Box::new(e)),
+			.ok();
+		return Err(());
+	};
+
+	let channel_id = if let Some(channel) = authour_channel_id(&guild, ctx.author().id) {
+		channel
+	} else {
+		reply(ctx, "You must use this command while in a voice channel.")
+			.await
+			.ok();
+		return Err(());
+	};
+
+	let (_, handler) = ctx.data().songbird.join_gateway(guild.id, channel_id).await;
+	match handler {
+		Ok(connection_info) => {
+			if let Err(e) = ctx
+				.data()
+				.lavalink
+				.create_session_with_songbird(&connection_info)
+				.await
+			{
+				reply(
+					ctx,
+					format!("Error joining {}: {}", channel_id.mention(), e),
+				)
+				.await
+				.ok();
+				return Err(());
+			}
+		}
+		Err(e) => {
+			reply(
+				ctx,
+				format!("Error joining {}: {}", channel_id.mention(), e),
+			)
+			.await
+			.ok();
+			return Err(());
+		}
+	};
+
+	if announce_success {
+		reply(ctx, format!("Joined: {}", channel_id.mention()))
+			.await
+			.ok();
 	}
+	Ok(guild)
 }
 
 fn authour_channel_id(guild: &Guild, authour_id: UserId) -> Option<ChannelId> {
@@ -81,37 +112,7 @@ fn authour_channel_id(guild: &Guild, authour_id: UserId) -> Option<ChannelId> {
 /// Have Radium join the voice channel you're in.
 #[command(prefix_command, slash_command, category = "Playback", aliases("j"))]
 pub async fn join(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild = if let Some(guild) = ctx.guild() {
-		guild
-	} else {
-		reply(ctx, "You must use this command from within a server.").await?;
-		return Ok(());
-	};
-
-	let channel_id = if let Some(channel) = authour_channel_id(&guild, ctx.author().id) {
-		channel
-	} else {
-		reply(ctx, "You must use this command while in a voice channel.").await?;
-		return Ok(());
-	};
-
-	match join_internal(
-		&ctx.data().songbird,
-		&ctx.data().lavalink,
-		guild.id,
-		channel_id,
-	)
-	.await
-	{
-		Ok(_) => reply(ctx, format!("Joined: {}", channel_id.mention())).await?,
-		Err(e) => {
-			reply(
-				ctx,
-				format!("Error joining {}: {}", channel_id.mention(), e),
-			)
-			.await?
-		}
-	};
+	join_internal(ctx, true).await.ok();
 
 	Ok(())
 }
@@ -186,42 +187,17 @@ pub async fn play_shuffled(
 
 /// The internal implementation of `play` and `play_shuffled`.
 async fn play_internal(ctx: PoiseContext<'_>, query: &str, shuffle: bool) -> Result<(), Error> {
-	let guild = if let Some(guild) = ctx.guild() {
-		guild
-	} else {
-		reply(ctx, "You must use this command from within a server.").await?;
-		return Ok(());
+	let guild = match join_internal(ctx, false).await {
+		Ok(guild_result) => guild_result,
+		Err(_) => return Ok(()),
 	};
+
+	let lavalink = &ctx.data().lavalink;
 
 	let query_trimmed = query.trim();
 	if query_trimmed.is_empty() {
 		reply(ctx, "The query must not be empty.").await?;
 		return Ok(());
-	}
-
-	let songbird = &ctx.data().songbird;
-	let lavalink = &ctx.data().lavalink;
-
-	if songbird.get(guild.id).is_none() {
-		let channel_id = if let Some(channel) = authour_channel_id(&guild, ctx.author().id) {
-			channel
-		} else {
-			reply(
-				ctx,
-				"You must use this command while either you or Radium is in a voice channel.",
-			)
-			.await?;
-			return Ok(());
-		};
-
-		if let Err(e) = join_internal(songbird, lavalink, guild.id, channel_id).await {
-			reply(
-				ctx,
-				format!("Error joining {}: {}", channel_id.mention(), e),
-			)
-			.await?;
-			return Ok(());
-		}
 	}
 
 	let mut queueable_tracks = Vec::new();
@@ -524,9 +500,12 @@ async fn play_internal(ctx: PoiseContext<'_>, query: &str, shuffle: bool) -> Res
 		reply(
 			ctx,
 			format!(
-				"Added to queue: [{}]({}) [{}]",
-				chop_str(track_info.title.as_str(), MAX_SINGLE_ENTRY_LENGTH),
-				track_info.uri,
+				"Added to queue: {} [{}]",
+				create_linked_title(
+					track_info.title.as_str(),
+					track_info.uri.as_str(),
+					MAX_SINGLE_ENTRY_LENGTH,
+				),
 				if track_info.is_stream {
 					LIVE_INDICATOR.to_owned()
 				} else if let Some(new_track_duration) = new_first_track_duration {
@@ -600,6 +579,80 @@ fn get_youtube_video_id(uri: &Url) -> Option<String> {
 	}
 }
 
+/// Text-to-speech in the current voice channel.
+///
+/// This command relies on functionality added by [a Lavalink plugin](https://github.com/DuncteBot/skybot-lavalink-plugin),
+/// and will not work without it.
+#[command(
+	prefix_command,
+	slash_command,
+	category = "Playback",
+	aliases("texttospeech", "say", "speak")
+)]
+pub async fn tts(
+	ctx: PoiseContext<'_>,
+	#[rest]
+	#[description = "What to say."]
+	message: String,
+) -> Result<(), Error> {
+	// Constants
+	const CHARACTER_LIMIT: usize = 200; // Seems to be a limit in Lavalink
+
+	// Sanitisation
+	let message_trimmed = message.trim();
+	if message_trimmed.is_empty() {
+		reply(ctx, "Your message cannot be empty.").await?;
+		return Ok(());
+	}
+	if message_trimmed.len() > CHARACTER_LIMIT {
+		reply(
+			ctx,
+			format!(
+				"Your message must be less than {} characters long.",
+				CHARACTER_LIMIT
+			),
+		)
+		.await?;
+		return Ok(());
+	}
+
+	// Queue it up
+	let guild = match join_internal(ctx, false).await {
+		Ok(guild_result) => guild_result,
+		Err(_) => return Ok(()),
+	};
+
+	let lavalink = &ctx.data().lavalink;
+
+	let tts_result = lavalink
+		.get_tracks(format!("speak:{}", message_trimmed))
+		.await?;
+	if tts_result.tracks.is_empty() {
+		reply(ctx, "TTS failed.").await?;
+		return Ok(());
+	}
+
+	let mut queueable = lavalink.play(guild.id, tts_result.tracks[0].clone());
+	queueable.requester(ctx.author().id.0);
+	if let Err(e) = queueable.queue().await {
+		reply(ctx, "Failed to queue up query result.").await?;
+		eprintln!("Failed to queue up query result: {}", e);
+		return Ok(());
+	};
+
+	// Update the queued count for the guild
+	{
+		let mut hash_map = ctx.data().queued_count.lock().unwrap();
+		let queued_count = hash_map.entry(guild.id).or_default();
+		*queued_count += 1;
+	}
+
+	// Response
+	reply(ctx, format!("Added to queue: \"{}\"", message_trimmed)).await?;
+
+	Ok(())
+}
+
 /// Skip the current track.
 #[command(
 	prefix_command,
@@ -636,9 +689,12 @@ pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		reply(
 			ctx,
 			format!(
-				"Skipped: [{}]({})",
-				chop_str(track_info.title.as_str(), MAX_SINGLE_ENTRY_LENGTH),
-				track_info.uri
+				"Skipped: {}",
+				create_linked_title(
+					track_info.title.as_str(),
+					track_info.uri.as_str(),
+					MAX_SINGLE_ENTRY_LENGTH,
+				)
 			),
 		)
 		.await?;
@@ -933,6 +989,7 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	match now_playing_opt {
 		Some(now_playing) => {
 			let track_info = now_playing.track.info.as_ref().unwrap();
+			let track_has_url_source = uri_is_url(track_info.uri.as_str());
 			let track_segments = {
 				let mut segment_data_handle = ctx.data().segment_data.lock().unwrap();
 				segment_data_handle
@@ -944,10 +1001,10 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 				e.title("Now Playing")
 					.field(
 						"Track:",
-						format!(
-							"[{}]({})",
-							chop_str(track_info.title.as_str(), MAX_SINGLE_ENTRY_LENGTH),
-							track_info.uri,
+						create_linked_title(
+							track_info.title.as_str(),
+							track_info.uri.as_str(),
+							MAX_SINGLE_ENTRY_LENGTH,
 						),
 						false,
 					)
@@ -961,8 +1018,9 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 						)
 						.mention(),
 						false,
-					)
-					.field(
+					);
+				if track_has_url_source {
+					e.field(
 						"Progress:",
 						create_progress_display(
 							if track_info.is_stream {
@@ -974,6 +1032,7 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 						),
 						false,
 					);
+				}
 				if let Some(Some(segments)) = track_segments {
 					e.field(
 						"Skip Segments:",
@@ -1023,11 +1082,15 @@ pub async fn queue(ctx: PoiseContext<'_>) -> Result<(), Error> {
 			let mut desc = String::new();
 			for (i, queued_track) in queue.iter().enumerate() {
 				let track_info = queued_track.track.info.as_ref().unwrap();
-				desc.push_str(format!("`{:01$}.` [", entry_offset + i + 1, number_width).as_str());
-				push_chopped_str(&mut desc, track_info.title.as_str(), MAX_LIST_ENTRY_LENGTH);
-				desc.push_str("](");
-				desc.push_str(track_info.uri.as_str());
-				desc.push(')');
+				desc.push_str(format!("`{:01$}.` ", entry_offset + i + 1, number_width).as_str());
+				desc.push_str(
+					create_linked_title(
+						track_info.title.as_str(),
+						track_info.uri.as_str(),
+						MAX_SINGLE_ENTRY_LENGTH,
+					)
+					.as_str(),
+				);
 				if i < queue_len - 1 {
 					desc.push('\n');
 					if desc.len() > DESCRIPTION_LENGTH_CUTOFF {

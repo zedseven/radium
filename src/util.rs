@@ -43,6 +43,21 @@ pub async fn reply_embed(
 		.with_context(|| "failed to send message")
 }
 
+pub fn create_linked_title(title: &str, uri: &str, max_length: usize) -> String {
+	if uri_is_url(uri) {
+		format!("[{}]({})", chop_str(title, max_length), uri,)
+	} else {
+		chop_str(title, max_length)
+	}
+}
+pub fn uri_is_url(uri: &str) -> bool {
+	lazy_static! {
+		static ref URL_REGEX: Regex = Regex::new(r"^https?://").unwrap();
+	}
+
+	URL_REGEX.is_match(uri)
+}
+
 /// Escapes a string for use in Discord, escaping all Markdown characters.
 ///
 /// Square brackets can't be escaped with slashes for some reason, so they're
