@@ -26,6 +26,7 @@ pub fn commands() -> Vec<Command<DataArc, Error>> {
 		skip(),
 		pause(),
 		resume(),
+		shuffle(),
 		seek(),
 		clear(),
 		now_playing(),

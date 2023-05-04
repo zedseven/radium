@@ -76,7 +76,16 @@ pub fn push_chopped_str(base: &mut String, new_str: &str, max_len: usize) {
 	const ELLIPSIS: char = '\u{2026}';
 
 	if new_str.len() > max_len {
-		base.push_str(escape_str(&new_str[0..(max_len - 1)]).trim_end());
+		// Find the valid Unicode codepoint boundary to slice on
+		let mut slice_index = 0;
+		for (char_index, _) in new_str.char_indices() {
+			if char_index > max_len {
+				break;
+			}
+			slice_index = char_index;
+		}
+		// Slice
+		base.push_str(escape_str(&new_str[0..slice_index]).trim_end());
 		base.push(ELLIPSIS);
 	} else {
 		base.push_str(escape_str(new_str).as_str());

@@ -804,6 +804,46 @@ pub async fn resume(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	Ok(())
 }
 
+/// Shuffle the current queue.
+#[command(prefix_command, slash_command, category = "Playback")]
+pub async fn shuffle(ctx: PoiseContext<'_>) -> Result<(), Error> {
+	let guild_id = if let Some(guild_id) = ctx.guild_id() {
+		guild_id
+	} else {
+		reply(ctx, "You must use this command from within a server.").await?;
+		return Ok(());
+	};
+
+	let lavalink = &ctx.data().lavalink;
+
+	let mut something_in_queue = false;
+	if let Some(mut node) = lavalink.nodes().await.get_mut(&guild_id.0) {
+		let old_queue = node.queue.clone();
+		if old_queue.len() > 1 {
+			something_in_queue = true;
+
+			// Leave the first track in place because that's what's actively playing
+			let mut new_queue = old_queue.get(1..).unwrap().to_vec();
+
+			let mut rng = thread_rng();
+			let mut inverse_riffle_shuffler = Irs::default();
+			inverse_riffle_shuffler
+				.shuffle(&mut new_queue, &mut rng)
+				.ok();
+
+			node.queue = vec![old_queue[0].clone()];
+			node.queue.append(&mut new_queue);
+		}
+	}
+	if something_in_queue {
+		reply(ctx, "Shuffled the upcoming tracks.").await?;
+	} else {
+		reply(ctx, "There is nothing to shuffle.").await?;
+	}
+
+	Ok(())
+}
+
 /// Seek to a specific time in the current track.
 ///
 /// You can specify the time to skip to as a timecode (`2:35`) or as individual

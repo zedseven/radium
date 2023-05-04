@@ -52,3 +52,4 @@
     - Queue(?)
 - Separate function implementations for `roll`, so that the slash version can have the annotation as an optional
 parameter
+- Apparently it fails if no db.sqlite file is present
