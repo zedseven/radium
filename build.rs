@@ -1,8 +1,10 @@
 // Uses
 use anyhow::Result;
-use vergen::{vergen, Config};
+use vergen::EmitBuilder;
 
 // Pre-Build Processing
 fn main() -> Result<()> {
-	vergen(Config::default())
+	EmitBuilder::builder().git_sha(true).emit()?;
+
+	Ok(())
 }

@@ -64,18 +64,12 @@ use diesel::{
 };
 use dotenv::dotenv;
 use lavalink_rs::LavalinkClient;
-use poise::{
-	builtins::on_error,
-	serenity::{
-		self,
-		http::Http,
-		model::{gateway::GatewayIntents, id::GuildId},
-		utils::parse_token,
-	},
-	EditTracker,
-	Framework,
-	FrameworkOptions,
-	PrefixFrameworkOptions,
+use poise::{builtins::on_error, EditTracker, Framework, FrameworkOptions, PrefixFrameworkOptions};
+use serenity::{
+	self,
+	http::Http,
+	model::{gateway::GatewayIntents, id::GuildId},
+	utils::parse_token,
 };
 use songbird::{SerenityInit, Songbird};
 use sponsor_block::Client as SponsorBlockClient;

@@ -9,7 +9,7 @@ use lavalink_rs::{
 	model::{GuildId, PlayerDestroyed, PlayerUpdate, TrackStart, TrackStuck, WebSocketClosed},
 	LavalinkClient,
 };
-use poise::serenity::async_trait;
+use serenity::async_trait;
 use tokio::time::{sleep, Instant};
 
 use crate::{constants::MILLIS_PER_SECOND_F32, segments::TrackSegments, DataArc};

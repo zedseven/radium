@@ -13,22 +13,18 @@ diesel_migrations = "1.4"
 dotenv = "0.15"
 lavalink-rs = { git = "https://gitlab.com/vicky5124/lavalink-rs", features = ["rustls", "serenity"] }
 lazy_static = "1.4"
-lru = "0.7"
+lru = "0.10"
 parse_duration = "2.1"
-poise = { git = "https://github.com/kangalioo/poise", branch = "develop" } # Remember when updating this, to also update the pinned serenity revisions below
+poise = "0.5"
 rand = "0.8"
 regex = "1.5"
+serenity = "0.11"
 shuffle = "0.1"
+songbird = "0.3"
 sponsor-block = { git = "https://github.com/zedseven/sponsor-block-rs", branch = "dev" }
 tokio = { version = "1.17", features = ["macros", "rt-multi-thread"] }
 url = "2.2"
 yansi = "0.5"
-
-[dependencies.songbird]
-git = "https://github.com/serenity-rs/songbird"
-branch = "next"
-default-features = false
-features = ["serenity-rustls", "gateway"]
 
 [target.'cfg(windows)'.dependencies]
 # To have sqlite3.lib be linked automatically
@@ -36,15 +32,7 @@ libsqlite3-sys = { version = "0.22", default-features = false, features = ["bund
 
 [build-dependencies]
 anyhow = "1.0"
-vergen = { version = "7.0", default-features = false, features = ["git"] }
-
-[patch.crates-io]
-serenity = { git = "https://github.com/serenity-rs//serenity", rev = "2bb9a01bfccd0485ccb7e9f20cce8edff7426eb3" }
-songbird = { git = "https://github.com/serenity-rs/songbird", branch = "next" }
-
-[patch.'https://github.com/serenity-rs/serenity']
-# The double-slash is because of a downright-stupid Cargo issue: https://github.com/rust-lang/cargo/issues/7670
-serenity = { git = "https://github.com/serenity-rs//serenity", rev = "2bb9a01bfccd0485ccb7e9f20cce8edff7426eb3" }
+vergen = { version = "8.1", default-features = false, features = ["git", "gitcl"] }
 
 [features]
 default = []

@@ -3,8 +3,8 @@ use anyhow::Context;
 use poise::{
 	builtins::{help as poise_help, register_application_commands, HelpConfiguration},
 	command,
-	serenity::model::{gateway::Activity, misc::Mentionable},
 };
+use serenity::model::{gateway::Activity, mention::Mentionable};
 
 use crate::{
 	constants::{CREATED_DATE, CREATOR_ID, PREFIX, PROGRAM_COMMIT, PROGRAM_VERSION, SOURCE_LINK},
@@ -48,7 +48,7 @@ pub async fn set_status(
 		_ => return Ok(()),
 	};
 
-	ctx.discord.set_activity(activity).await;
+	ctx.serenity_context.set_activity(activity).await;
 
 	Ok(())
 }

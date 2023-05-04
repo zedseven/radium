@@ -1,5 +1,5 @@
 // Uses
-use poise::serenity::{
+use serenity::{
 	async_trait,
 	client::RawEventHandler,
 	model::{event::Event, gateway::Ready},

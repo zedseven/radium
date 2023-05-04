@@ -3,20 +3,18 @@ use std::time::Duration;
 
 use anyhow::Context;
 use parse_duration::parse as parse_duration;
-use poise::{
-	command,
-	serenity::model::{
-		guild::Guild,
-		id::{ChannelId, UserId},
-		misc::Mentionable,
-	},
-};
+use poise::command;
 use rand::thread_rng;
+#[cfg(feature = "tts")]
+use serenity::model::id::GuildId;
+use serenity::model::{
+	guild::Guild,
+	id::{ChannelId, UserId},
+	mention::Mentionable,
+};
 use shuffle::{irs::Irs, shuffler::Shuffler};
 use sponsor_block::Action;
 use url::Url;
-#[cfg(feature = "tts")]
-use poise::serenity::model::id::GuildId;
 
 use crate::{
 	constants::{

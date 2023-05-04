@@ -1,8 +1,9 @@
 // Uses
 use anyhow::{Context, Error};
 use lazy_static::lazy_static;
-use poise::{send_reply, serenity::builder::CreateEmbed, ReplyHandle};
+use poise::{send_reply, ReplyHandle};
 use regex::Regex;
+use serenity::builder::CreateEmbed;
 
 use crate::{
 	constants::{

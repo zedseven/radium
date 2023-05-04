@@ -3,7 +3,7 @@
 
 // Uses
 use lazy_static::lazy_static;
-use poise::serenity::{model::id::UserId, utils::Colour};
+use serenity::{model::id::UserId, utils::Colour};
 use sponsor_block::{AcceptedActions, AcceptedCategories};
 use yansi::{Color, Style};
 

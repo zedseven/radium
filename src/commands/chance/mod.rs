@@ -13,7 +13,8 @@ use diesel::{
 	RunQueryDsl,
 	TextExpressionMethods,
 };
-use poise::{command, serenity::model::misc::Mentionable};
+use poise::command;
+use serenity::model::mention::Mentionable;
 
 use self::roll::{evaluate_roll_rpn, parse_roll_command, Dice};
 use crate::{
