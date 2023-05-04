@@ -11,7 +11,7 @@ anyhow = "1.0"
 diesel = { version = "1.4", features = ["r2d2", "sqlite"] }
 diesel_migrations = "1.4"
 dotenv = "0.15"
-lavalink-rs = { git = "https://gitlab.com/vicky5124/lavalink-rs", features = ["rustls", "serenity"] }
+lavalink-rs = { git = "https://gitlab.com/zedseven/lavalink-rs", features = ["rustls", "serenity"] }
 lazy_static = "1.4"
 lru = "0.10"
 parse_duration = "2.1"
