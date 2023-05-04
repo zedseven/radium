@@ -65,10 +65,7 @@ impl FromStr for Dice {
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		let processed = s.trim().to_lowercase();
 
-		let d_index = match processed.find('d') {
-			Some(v) => v,
-			None => return Err(ParseDiceError::Format),
-		};
+		let Some(d_index) = processed.find('d') else { return Err(ParseDiceError::Format) };
 
 		let dice_count = if d_index == 0 {
 			1

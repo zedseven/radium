@@ -47,18 +47,14 @@ const LIVE_INDICATOR: &str = "\u{1f534} **LIVE**";
 
 // Functions
 async fn join_internal(ctx: PoiseContext<'_>, announce_success: bool) -> Result<Guild, ()> {
-	let guild = if let Some(guild) = ctx.guild() {
-		guild
-	} else {
+	let Some(guild) = ctx.guild() else {
 		reply(ctx, "You must use this command from within a server.")
 			.await
 			.ok();
 		return Err(());
 	};
 
-	let channel_id = if let Some(channel) = authour_channel_id(&guild, ctx.author().id) {
-		channel
-	} else {
+	let Some(channel_id) = authour_channel_id(&guild, ctx.author().id) else {
 		reply(ctx, "You must use this command while in a voice channel.")
 			.await
 			.ok();
@@ -120,9 +116,7 @@ pub async fn join(ctx: PoiseContext<'_>) -> Result<(), Error> {
 /// Have Radium leave the voice channel it's in, if any.
 #[command(prefix_command, slash_command, category = "Playback", aliases("l"))]
 pub async fn leave(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild_id = if let Some(guild_id) = ctx.guild_id() {
-		guild_id
-	} else {
+	let Some(guild_id) = ctx.guild_id() else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
 	};
@@ -187,10 +181,7 @@ pub async fn play_shuffled(
 
 /// The internal implementation of `play` and `play_shuffled`.
 async fn play_internal(ctx: PoiseContext<'_>, query: &str, shuffle: bool) -> Result<(), Error> {
-	let guild = match join_internal(ctx, false).await {
-		Ok(guild_result) => guild_result,
-		Err(_) => return Ok(()),
-	};
+	let Ok(guild) = join_internal(ctx, false).await else { return Ok(()) };
 
 	let lavalink = &ctx.data().lavalink;
 
@@ -307,9 +298,7 @@ async fn play_internal(ctx: PoiseContext<'_>, query: &str, shuffle: bool) -> Res
 		let track_identifier_opt = track.info.as_ref().map(|i| &i.identifier);
 		let mut cache_track_with_none = true;
 		'sponsorblock: {
-			let track_identifier = if let Some(identifier) = track_identifier_opt {
-				identifier
-			} else {
+			let Some(track_identifier) = track_identifier_opt else {
 				break 'sponsorblock;
 			};
 
@@ -645,10 +634,7 @@ pub async fn tts(
 	}*/
 
 	// Join the channel and set up
-	let guild = match join_internal(ctx, false).await {
-		Ok(guild_result) => guild_result,
-		Err(_) => return Ok(()),
-	};
+	let Ok(guild) = join_internal(ctx, false).await else { return Ok(()) };
 
 	// Queue it up
 	let mut queued_tracks = 0;
@@ -710,9 +696,7 @@ pub async fn tts(
 	aliases("next", "stop", "n", "s")
 )]
 pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild_id = if let Some(guild_id) = ctx.guild_id() {
-		guild_id
-	} else {
+	let Some(guild_id) = ctx.guild_id() else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
 	};
@@ -759,9 +743,7 @@ pub async fn skip(ctx: PoiseContext<'_>) -> Result<(), Error> {
 /// The opposite of `resume`.
 #[command(prefix_command, slash_command, category = "Playback")]
 pub async fn pause(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild_id = if let Some(guild_id) = ctx.guild_id() {
-		guild_id
-	} else {
+	let Some(guild_id) = ctx.guild_id() else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
 	};
@@ -784,9 +766,7 @@ pub async fn pause(ctx: PoiseContext<'_>) -> Result<(), Error> {
 /// The opposite of `pause`.
 #[command(prefix_command, slash_command, category = "Playback")]
 pub async fn resume(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild_id = if let Some(guild_id) = ctx.guild_id() {
-		guild_id
-	} else {
+	let Some(guild_id) = ctx.guild_id() else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
 	};
@@ -807,9 +787,7 @@ pub async fn resume(ctx: PoiseContext<'_>) -> Result<(), Error> {
 /// Shuffle the current queue.
 #[command(prefix_command, slash_command, category = "Playback")]
 pub async fn shuffle(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild_id = if let Some(guild_id) = ctx.guild_id() {
-		guild_id
-	} else {
+	let Some(guild_id) = ctx.guild_id() else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
 	};
@@ -936,17 +914,13 @@ pub async fn seek(
 		return Ok(());
 	}
 
-	let time_dur = if let Ok(duration) = parse_duration(time_prepared.as_str()) {
-		duration
-	} else {
+	let Ok(time_dur) = parse_duration(time_prepared.as_str()) else {
 		reply(ctx, "Invalid value for time.").await?;
 		return Ok(());
 	};
 
 	// Seek to the parsed time
-	let guild_id = if let Some(guild_id) = ctx.guild_id() {
-		guild_id
-	} else {
+	let Some(guild_id) = ctx.guild_id() else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
 	};
@@ -971,9 +945,7 @@ pub async fn seek(
 /// offline.
 #[command(prefix_command, slash_command, category = "Playback", aliases("c"))]
 pub async fn clear(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild_id = if let Some(guild_id) = ctx.guild_id() {
-		guild_id
-	} else {
+	let Some(guild_id) = ctx.guild_id() else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
 	};
@@ -1061,9 +1033,7 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		ret
 	}
 
-	let guild_id = if let Some(guild_id) = ctx.guild_id() {
-		guild_id
-	} else {
+	let Some(guild_id) = ctx.guild_id() else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
 	};
@@ -1144,9 +1114,7 @@ pub async fn now_playing(ctx: PoiseContext<'_>) -> Result<(), Error> {
 /// Show the playback queue.
 #[command(prefix_command, slash_command, category = "Playback", aliases("q"))]
 pub async fn queue(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	let guild_id = if let Some(guild_id) = ctx.guild_id() {
-		guild_id
-	} else {
+	let Some(guild_id) = ctx.guild_id() else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
 	};

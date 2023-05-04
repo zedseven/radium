@@ -178,9 +178,7 @@ pub async fn save_roll(
 	command: String,
 ) -> Result<(), Error> {
 	// Get the associated IDs or exit
-	let (ctx_guild_id, ctx_user_id) = if let Some(ids) = get_ctx_ids(ctx) {
-		ids
-	} else {
+	let Some((ctx_guild_id, ctx_user_id)) = get_ctx_ids(ctx) else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
 	};
@@ -239,9 +237,7 @@ pub async fn delete_roll(
 	#[description = "The name of the saved roll command to delete."] mut identifier: String,
 ) -> Result<(), Error> {
 	// Get the associated IDs or exit
-	let (ctx_guild_id, ctx_user_id) = if let Some(ids) = get_ctx_ids(ctx) {
-		ids
-	} else {
+	let Some((ctx_guild_id, ctx_user_id)) = get_ctx_ids(ctx) else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
 	};
@@ -302,9 +298,7 @@ pub async fn run_roll(
 	additional: Option<String>,
 ) -> Result<(), Error> {
 	// Get the associated IDs or exit
-	let (ctx_guild_id, ctx_user_id) = if let Some(ids) = get_ctx_ids(ctx) {
-		ids
-	} else {
+	let Some((ctx_guild_id, ctx_user_id)) = get_ctx_ids(ctx) else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
 	};
@@ -381,9 +375,7 @@ pub async fn run_roll(
 )]
 pub async fn saved_rolls(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	// Get the associated IDs or exit
-	let (ctx_guild_id, ctx_user_id) = if let Some(ids) = get_ctx_ids(ctx) {
-		ids
-	} else {
+	let Some((ctx_guild_id, ctx_user_id)) = get_ctx_ids(ctx) else {
 		reply(ctx, "You must use this command from within a server.").await?;
 		return Ok(());
 	};
