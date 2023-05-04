@@ -1,5 +1,5 @@
 // Uses
-use std::collections::HashMap;
+use std::{collections::HashMap, num::NonZeroUsize};
 
 use lavalink_rs::model::GuildId;
 use lru::LruCache;
@@ -22,7 +22,9 @@ impl SegmentData {
 	pub fn new() -> Self {
 		Self {
 			active_segments: HashMap::new(),
-			cached_segments: LruCache::new(VIDEO_SEGMENT_CACHE_SIZE),
+			cached_segments: LruCache::new(
+				NonZeroUsize::new(VIDEO_SEGMENT_CACHE_SIZE).expect("the constant is non-zero"),
+			),
 		}
 	}
 }
