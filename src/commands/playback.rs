@@ -7,7 +7,7 @@ use poise::{
 	command,
 	serenity::model::{
 		guild::Guild,
-		id::{ChannelId, GuildId, UserId},
+		id::{ChannelId, UserId},
 		misc::Mentionable,
 	},
 };
@@ -15,6 +15,8 @@ use rand::thread_rng;
 use shuffle::{irs::Irs, shuffler::Shuffler};
 use sponsor_block::Action;
 use url::Url;
+#[cfg(feature = "tts")]
+use poise::serenity::model::id::GuildId;
 
 use crate::{
 	constants::{
