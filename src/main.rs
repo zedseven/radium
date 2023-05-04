@@ -128,22 +128,19 @@ async fn main() -> Result<(), Error> {
 		HEADER_STYLE.paint(format!(
 			"{} --- {} --- {}",
 			Paint::yellow("\u{2622}\u{fe0f}"),
-			Paint::red(format!("Radium v{}", PROGRAM_VERSION)),
+			Paint::red(format!("Radium v{PROGRAM_VERSION}")),
 			Paint::green("\u{1f4fb}")
 		))
 	);
 
 	// Prepare basic bot information
 	let raw_token = var(DISCORD_TOKEN_VAR).with_context(|| {
-		format!(
-			"expected the discord token in the environment variable {}",
-			DISCORD_TOKEN_VAR
-		)
+		format!("expected the discord token in the environment variable {DISCORD_TOKEN_VAR}")
 	})?;
 	let token = if raw_token.starts_with("Bot ") || raw_token.starts_with("Bearer ") {
 		raw_token.to_string()
 	} else {
-		format!("Bot {}", raw_token)
+		format!("Bot {raw_token}")
 	};
 	let app_id = parse_token(&raw_token)
 		.with_context(|| "token is invalid".to_owned())?
@@ -151,8 +148,8 @@ async fn main() -> Result<(), Error> {
 
 	let sponsor_block_user_id = var(SPONSOR_BLOCK_USER_ID_VAR).with_context(|| {
 		format!(
-			"expected the SponsorBlock user ID in the environment variable {}",
-			SPONSOR_BLOCK_USER_ID_VAR
+			"expected the SponsorBlock user ID in the environment variable \
+			 {SPONSOR_BLOCK_USER_ID_VAR}"
 		)
 	})?;
 
@@ -204,8 +201,8 @@ async fn main() -> Result<(), Error> {
 		.set_host(var(LAVALINK_HOST_VAR).unwrap_or_else(|_| LAVALINK_HOST_DEFAULT.to_owned()))
 		.set_password(var(LAVALINK_PASSWORD_VAR).with_context(|| {
 			format!(
-				"expected the Lavalink password in the environment variable {}",
-				LAVALINK_PASSWORD_VAR
+				"expected the Lavalink password in the environment variable \
+				 {LAVALINK_PASSWORD_VAR}"
 			)
 		})?)
 		.build(LavalinkHandler {

@@ -75,10 +75,9 @@ pub async fn help(
 		command.as_deref(),
 		HelpConfiguration {
 			extra_text_at_bottom:       format!(
-				"You can also use commands with a `{0}` instead of a slash, eg. `{0}help` instead \
-				 of `/help`.\nEdit your message to the bot and the bot will edit it's response \
-				 for this help dialog.",
-				PREFIX
+				"You can also use commands with a `{PREFIX}` instead of a slash, eg. \
+				 `{PREFIX}help` instead of `/help`.\nEdit your message to the bot and the bot \
+				 will edit it's response for this help dialog."
 			)
 			.as_str(),
 			ephemeral:                  true,
@@ -97,14 +96,14 @@ pub async fn about(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	reply_embed(ctx, |e| {
 		e.title("Radium")
 			.description(format!(
-				"The Radium Radio bot, [`v{}`]({}/commit/{}).",
-				PROGRAM_VERSION, SOURCE_LINK, PROGRAM_COMMIT
+				"The Radium Radio bot, \
+				 [`v{PROGRAM_VERSION}`]({SOURCE_LINK}/commit/{PROGRAM_COMMIT})."
 			))
 			.field("Authour:", CREATOR_ID.mention(), false)
 			.field("Source Link:", SOURCE_LINK, false)
 			.field(
 				"Created:",
-				format!("{}, because Groovy died. \u{1f6b1}", CREATED_DATE),
+				format!("{CREATED_DATE}, because Groovy died. \u{1f6b1}"),
 				false,
 			)
 	})

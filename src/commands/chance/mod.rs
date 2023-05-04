@@ -123,7 +123,7 @@ pub async fn batch_roll(
 		for (i, result) in roll_results.iter().enumerate() {
 			result_display.push_str(format!("{:>1$}: ", i + 1, number_width).as_str());
 			result_display.push_str(
-				format!("{:.2}", result)
+				format!("{result:.2}")
 					.trim_end_matches('0')
 					.trim_end_matches('.'),
 			);
@@ -139,12 +139,12 @@ pub async fn batch_roll(
 			if !slash_command {
 				e.field("For:", ctx.author().mention(), true);
 			}
-			e.field("Count:", format!("`{}`", count), true);
+			e.field("Count:", format!("`{count}`"), true);
 			if !annotation.is_empty() {
-				e.field("Reason:", format!("`{}`", annotation), true);
+				e.field("Reason:", format!("`{annotation}`"), true);
 			}
-			e.field("Command:", format!("`{}`", command_slice_escaped), false)
-				.field("Results:", format!("```{}```", result_display), false)
+			e.field("Command:", format!("`{command_slice_escaped}`"), false)
+				.field("Results:", format!("```{result_display}```"), false)
 		})
 		.await?;
 	} else {
@@ -221,7 +221,7 @@ pub async fn save_roll(
 	}
 
 	// Finish up
-	reply(ctx, format!("Saved the roll command `{}`.", identifier)).await?;
+	reply(ctx, format!("Saved the roll command `{identifier}`.")).await?;
 
 	Ok(())
 }
@@ -262,21 +262,18 @@ pub async fn delete_roll(
 	// Respond with the result
 	if let Ok(count) = deleted_rows {
 		if count == 1 {
-			reply(ctx, format!("The saved roll `{}` was deleted.", identifier)).await?;
+			reply(ctx, format!("The saved roll `{identifier}` was deleted.")).await?;
 		} else {
 			reply(
 				ctx,
-				format!(
-					"A saved roll could not be found with the name `{}`.",
-					identifier
-				),
+				format!("A saved roll could not be found with the name `{identifier}`.",),
 			)
 			.await?;
 		}
 	} else {
 		reply(
 			ctx,
-			format!("A problem was encountered with deleting `{}`.", identifier),
+			format!("A problem was encountered with deleting `{identifier}`."),
 		)
 		.await?;
 	}
@@ -324,10 +321,7 @@ pub async fn run_roll(
 		if search_result.is_err() {
 			reply(
 				ctx,
-				format!(
-					"A saved roll could not be found for the query `{}`.",
-					identifier
-				),
+				format!("A saved roll could not be found for the query `{identifier}`.",),
 			)
 			.await?;
 			return Ok(());
@@ -411,7 +405,7 @@ pub async fn saved_rolls(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	// Prepare the formatted list
 	let mut output = format!("For {}:", ctx.author().id.mention());
 	for (name, command) in &saved_commands {
-		output.push_str(format!("\n**{}:** `{}`", name, command).as_str());
+		output.push_str(format!("\n**{name}:** `{command}`").as_str());
 	}
 
 	// Send the reply
@@ -448,7 +442,7 @@ pub async fn dice_jail(ctx: PoiseContext<'_>) -> Result<(), Error> {
 				"The previous dice have been\nput in dice jail for now. \u{1f3b2}\u{26d3}\u{fe0f}",
 			)
 			.field(
-				format!("Sample Rolls ({}d{}):", DICE_COUNT, DICE_SIZE),
+				format!("Sample Rolls ({DICE_COUNT}d{DICE_SIZE}):"),
 				display_rolls(&[rolls]),
 				false,
 			)
@@ -487,7 +481,7 @@ async fn execute_roll(
 			// off trailing '0's and '.'s so that normal rolls don't have decimals
 			// We don't use the &[char] pattern:
 			// If we did, numbers like `600.0` would become `6`
-			let result_display = format!("{:.2}", result)
+			let result_display = format!("{result:.2}")
 				.trim_end_matches('0')
 				.trim_end_matches('.')
 				.to_owned();
@@ -504,11 +498,11 @@ async fn execute_roll(
 						e.field("For:", ctx.author().mention(), true);
 					}
 					if let Some(annotation) = annotation_escaped {
-						e.field("Reason:", format!("`{}`", annotation), true);
+						e.field("Reason:", format!("`{annotation}`"), true);
 					}
-					e.field("Command:", format!("`{}`", command_slice_escaped), false)
+					e.field("Command:", format!("`{command_slice_escaped}`"), false)
 						.field("Rolls:", rolls_string, false)
-						.field("Result:", format!("`{}`", result_display), false)
+						.field("Result:", format!("`{result_display}`"), false)
 				})
 				.await?;
 			} else {

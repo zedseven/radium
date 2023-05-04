@@ -125,7 +125,7 @@ pub async fn leave(ctx: PoiseContext<'_>) -> Result<(), Error> {
 
 	if songbird.get(guild_id).is_some() {
 		if let Err(e) = songbird.remove(guild_id).await {
-			reply(ctx, format!("Error leaving voice channel: {}", e)).await?;
+			reply(ctx, format!("Error leaving voice channel: {e}")).await?;
 		}
 
 		let lavalink = &ctx.data().lavalink;
@@ -471,7 +471,7 @@ async fn play_internal(ctx: PoiseContext<'_>, query: &str, shuffle: bool) -> Res
 		}
 		if let Err(e) = queueable.queue().await {
 			reply(ctx, "Failed to queue up query result.").await?;
-			eprintln!("Failed to queue up query result: {}", e);
+			eprintln!("Failed to queue up query result: {e}");
 			return Ok(());
 		};
 	}
@@ -529,7 +529,7 @@ async fn play_internal(ctx: PoiseContext<'_>, query: &str, shuffle: bool) -> Res
 			}
 		}
 		reply_embed(ctx, |e| {
-			e.title(format!("Added {} Tracks:", queueable_tracks_len))
+			e.title(format!("Added {queueable_tracks_len} Tracks:"))
 				.description(desc)
 		})
 		.await?;
@@ -597,7 +597,7 @@ pub async fn tts(
 		let lavalink = &ctx.data().lavalink;
 
 		// Fetch the fragment
-		let tts_result = lavalink.get_tracks(format!("speak:{}", fragment)).await?;
+		let tts_result = lavalink.get_tracks(format!("speak:{fragment}")).await?;
 		if tts_result.tracks.is_empty() {
 			reply(ctx, "TTS failed.").await?;
 			return Ok(());
@@ -608,7 +608,7 @@ pub async fn tts(
 		queueable.requester(ctx.author().id.0);
 		if let Err(e) = queueable.queue().await {
 			reply(ctx, "Failed to queue up query result.").await?;
-			eprintln!("Failed to queue up query result: {}", e);
+			eprintln!("Failed to queue up query result: {e}");
 			return Ok(());
 		};
 
@@ -645,8 +645,7 @@ pub async fn tts(
 			reply(
 				ctx,
 				format!(
-					"A single word cannot be longer than {} characters.",
-					MAX_SINGLE_FRAGMENT_SIZE
+					"A single word cannot be longer than {MAX_SINGLE_FRAGMENT_SIZE} characters."
 				),
 			)
 			.await?;
@@ -752,7 +751,7 @@ pub async fn pause(ctx: PoiseContext<'_>) -> Result<(), Error> {
 
 	if let Err(e) = lavalink.pause(guild_id.0).await {
 		reply(ctx, "Failed to pause playback.").await?;
-		eprintln!("Failed to pause playback: {}", e);
+		eprintln!("Failed to pause playback: {e}");
 		return Ok(());
 	};
 
@@ -775,7 +774,7 @@ pub async fn resume(ctx: PoiseContext<'_>) -> Result<(), Error> {
 
 	if let Err(e) = lavalink.resume(guild_id.0).await {
 		reply(ctx, "Failed to resume playback.").await?;
-		eprintln!("Failed to resume playback: {}", e);
+		eprintln!("Failed to resume playback: {e}");
 		return Ok(());
 	};
 
@@ -929,7 +928,7 @@ pub async fn seek(
 
 	if let Err(e) = lavalink.seek(guild_id.0, time_dur).await {
 		reply(ctx, "Failed to seek to the specified time.").await?;
-		eprintln!("Failed to seek to the specified time: {}", e);
+		eprintln!("Failed to seek to the specified time: {e}");
 		return Ok(());
 	};
 
@@ -1158,9 +1157,9 @@ pub async fn queue(ctx: PoiseContext<'_>) -> Result<(), Error> {
 			}
 			reply_embed(ctx, |e| {
 				e.title(if queue_len == 1 {
-					format!("Queue ({} total track):", queue_len)
+					format!("Queue ({queue_len} total track):")
 				} else {
-					format!("Queue ({} total tracks):", queue_len)
+					format!("Queue ({queue_len} total tracks):")
 				})
 				.description(desc)
 			})
