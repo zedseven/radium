@@ -248,7 +248,7 @@ async fn main() -> Result<(), Error> {
 		*data_guard = Some(Arc::clone(&data));
 	}
 
-	Framework::build()
+	Framework::builder()
 		.options(options)
 		.token(&token)
 		.intents(GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT)
@@ -257,7 +257,7 @@ async fn main() -> Result<(), Error> {
 				.raw_event_handler(SerenityHandler)
 				.register_songbird_with(songbird)
 		})
-		.user_data_setup(move |_ctx, _ready, _framework| Box::pin(async move { Ok(data) }))
+		.setup(move |_ctx, _ready, _framework| Box::pin(async move { Ok(data) }))
 		.build()
 		.await
 		.with_context(|| "failed to build the bot framework")?
