@@ -117,7 +117,7 @@ pub async fn batch_roll(
 		});
 
 		// Prepare the results list
-		let number_width = count.log10() as usize + 1;
+		let number_width = count.ilog10() as usize + 1;
 		let mut result_display = String::new();
 		for (i, result) in roll_results.iter().enumerate() {
 			result_display.push_str(format!("{:>1$}: ", i + 1, number_width).as_str());

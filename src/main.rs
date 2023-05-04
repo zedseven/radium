@@ -1,6 +1,3 @@
-// Features
-#![feature(int_log)]
-#![feature(label_break_value)]
 // Linting Rules
 #![warn(
 	clippy::complexity,

@@ -1166,7 +1166,7 @@ pub async fn queue(ctx: PoiseContext<'_>) -> Result<(), Error> {
 				*hash_map.entry(guild_id).or_default()
 			};
 			let entry_offset = global_queued_count - queue_len;
-			let number_width = global_queued_count.log10() as usize + 1;
+			let number_width = global_queued_count.ilog10() as usize + 1;
 
 			let mut desc = String::new();
 			for (i, queued_track) in queue.iter().enumerate() {
