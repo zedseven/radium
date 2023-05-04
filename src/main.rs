@@ -101,12 +101,12 @@ pub type PoisePrefixContext<'a> = poise::PrefixContext<'a, DataArc, Error>;
 pub type SerenityContext = serenity::client::Context;
 
 pub struct Data {
-	db_pool: Pool<ConnectionManager<SqliteConnection>>,
-	songbird: Arc<Songbird>,
-	lavalink: LavalinkClient,
+	db_pool:       Pool<ConnectionManager<SqliteConnection>>,
+	songbird:      Arc<Songbird>,
+	lavalink:      LavalinkClient,
 	sponsor_block: SponsorBlockClient,
-	queued_count: Mutex<HashMap<GuildId, usize>>,
-	segment_data: Mutex<SegmentData>,
+	queued_count:  Mutex<HashMap<GuildId, usize>>,
+	segment_data:  Mutex<SegmentData>,
 }
 
 /// Entry point.
@@ -235,12 +235,12 @@ async fn main() -> Result<(), Error> {
 	let songbird_clone = Arc::clone(&songbird); // Required because the closure that uses it moves the value
 
 	let data = Arc::new(Data {
-		db_pool: database_pool,
-		songbird: songbird_clone,
-		lavalink: lava_client,
+		db_pool:       database_pool,
+		songbird:      songbird_clone,
+		lavalink:      lava_client,
 		sponsor_block: sponsor_block_client,
-		queued_count: Mutex::new(HashMap::new()),
-		segment_data: Mutex::new(SegmentData::new()),
+		queued_count:  Mutex::new(HashMap::new()),
+		segment_data:  Mutex::new(SegmentData::new()),
 	});
 	// Set the Data Arc that was given to the LavalinkHandler
 	{

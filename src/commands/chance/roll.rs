@@ -16,8 +16,8 @@ pub enum Evaluable {
 
 #[derive(Debug)]
 pub struct Dice {
-	pub size: u32,
-	pub count: u32,
+	pub size:     u32,
+	pub count:    u32,
 	pub modifier: Option<DiceModifier>,
 }
 
@@ -62,6 +62,7 @@ pub enum ParseDiceError {
 
 impl FromStr for Dice {
 	type Err = ParseDiceError;
+
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		let processed = s.trim().to_lowercase();
 
@@ -129,9 +130,9 @@ impl FromStr for Dice {
 
 #[derive(Debug)]
 pub struct Operator {
-	pub op: OperatorType,
-	pub functional: bool,
-	pub precedence: u8,
+	pub op:              OperatorType,
+	pub functional:      bool,
+	pub precedence:      u8,
 	pub associates_left: bool,
 }
 
@@ -156,45 +157,45 @@ pub fn parse_roll_command(command: &str) -> Result<Vec<Evaluable>, ()> {
 	fn token_to_operator(token: char) -> Option<Operator> {
 		match token {
 			'^' => Some(Operator {
-				op: OperatorType::Exponent,
-				functional: true,
-				precedence: 4,
+				op:              OperatorType::Exponent,
+				functional:      true,
+				precedence:      4,
 				associates_left: false,
 			}),
 			'*' | '\u{d7}' | 'x' => Some(Operator {
-				op: OperatorType::Multiply,
-				functional: true,
-				precedence: 3,
+				op:              OperatorType::Multiply,
+				functional:      true,
+				precedence:      3,
 				associates_left: true,
 			}),
 			'/' | '\u{f7}' => Some(Operator {
-				op: OperatorType::Divide,
-				functional: true,
-				precedence: 3,
+				op:              OperatorType::Divide,
+				functional:      true,
+				precedence:      3,
 				associates_left: true,
 			}),
 			'+' => Some(Operator {
-				op: OperatorType::Add,
-				functional: true,
-				precedence: 2,
+				op:              OperatorType::Add,
+				functional:      true,
+				precedence:      2,
 				associates_left: true,
 			}),
 			'-' => Some(Operator {
-				op: OperatorType::Subtract,
-				functional: true,
-				precedence: 2,
+				op:              OperatorType::Subtract,
+				functional:      true,
+				precedence:      2,
 				associates_left: true,
 			}),
 			'(' => Some(Operator {
-				op: OperatorType::ParenthesisLeft,
-				functional: false,
-				precedence: 0,
+				op:              OperatorType::ParenthesisLeft,
+				functional:      false,
+				precedence:      0,
 				associates_left: true,
 			}),
 			')' => Some(Operator {
-				op: OperatorType::ParenthesisRight,
-				functional: false,
-				precedence: 0,
+				op:              OperatorType::ParenthesisRight,
+				functional:      false,
+				precedence:      0,
 				associates_left: true,
 			}),
 			_ => None,

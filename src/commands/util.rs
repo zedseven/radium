@@ -74,14 +74,14 @@ pub async fn help(
 		ctx,
 		command.as_deref(),
 		HelpConfiguration {
-			extra_text_at_bottom: format!(
+			extra_text_at_bottom:       format!(
 				"You can also use commands with a `{0}` instead of a slash, eg. `{0}help` instead \
 				 of `/help`.\nEdit your message to the bot and the bot will edit it's response \
 				 for this help dialog.",
 				PREFIX
 			)
 			.as_str(),
-			ephemeral: true,
+			ephemeral:                  true,
 			show_context_menu_commands: false,
 		},
 	)

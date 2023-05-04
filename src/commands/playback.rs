@@ -373,10 +373,10 @@ async fn play_internal(ctx: PoiseContext<'_>, query: &str, shuffle: bool) -> Res
 							.filter_map(|s| match &s.action {
 								Action::Skip(start, end) | Action::Mute(start, end) => {
 									Some(SkipSegment {
-										start: *start,
-										end: *end,
+										start:       *start,
+										end:         *end,
 										is_at_start: false,
-										is_at_end: false,
+										is_at_end:   false,
 									})
 								}
 								_ => None,

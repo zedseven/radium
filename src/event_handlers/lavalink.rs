@@ -204,7 +204,7 @@ fn update_segment_data(
 				guild_id,
 				TrackSegments {
 					track_identifier: new_track_name,
-					segments: new_segments,
+					segments:         new_segments,
 				},
 			);
 			successfully_set_new_track = true;

@@ -9,7 +9,7 @@ use super::schema::*;
 #[primary_key(guild_id, user_id, name)]
 pub struct SavedRoll<'a> {
 	pub guild_id: i64,
-	pub user_id: i64,
-	pub name: Cow<'a, str>,
-	pub command: Cow<'a, str>,
+	pub user_id:  i64,
+	pub name:     Cow<'a, str>,
+	pub command:  Cow<'a, str>,
 }

@@ -34,17 +34,17 @@ impl SegmentData {
 #[derive(Debug, Clone)]
 pub struct TrackSegments {
 	pub track_identifier: String,
-	pub segments: Vec<SkipSegment>,
+	pub segments:         Vec<SkipSegment>,
 }
 
 #[derive(Debug, Copy, Clone, Default)]
 pub struct SkipSegment {
-	pub start: f32,
-	pub end: f32,
+	pub start:       f32,
+	pub end:         f32,
 	// Start segments should still be cacheable, but shouldn't be considered by the mid-playback
 	// skipping
 	pub is_at_start: bool,
-	pub is_at_end: bool,
+	pub is_at_end:   bool,
 }
 
 impl SkipSegment {

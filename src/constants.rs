@@ -14,7 +14,7 @@ pub const CREATOR_ID: UserId = UserId(177584890554875904);
 pub const SOURCE_LINK: &str = "https://github.com/zedseven/radium";
 pub const CREATED_DATE: &str = "2021-08-30";
 pub const PREFIX: &str = "-";
-pub const MAIN_COLOUR: Colour = Colour(0xbf5c4e);
+pub const MAIN_COLOUR: Colour = Colour(0xBF5C4E);
 // https://github.com/bitflags/bitflags/issues/180#issuecomment-499302965
 pub const SPONSOR_BLOCK_ACCEPTED_CATEGORIES: AcceptedCategories =
 	AcceptedCategories::from_bits_truncate(
