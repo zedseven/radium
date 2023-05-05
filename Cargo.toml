@@ -18,7 +18,7 @@ parse_duration = "2.1"
 poise = "0.5"
 rand = "0.8"
 regex = "1.5"
-serenity = "0.11"
+serenity = { version = "0.11", default-features = false, features = ["builder", "client", "gateway", "model", "utils", "collector"] }
 shuffle = "0.1"
 songbird = "0.3"
 sponsor-block = { git = "https://github.com/zedseven/sponsor-block-rs", branch = "dev" }
