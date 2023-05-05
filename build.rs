@@ -4,7 +4,7 @@ use vergen::EmitBuilder;
 
 // Pre-Build Processing
 fn main() -> Result<()> {
-	EmitBuilder::builder().git_sha(true).emit()?;
+	EmitBuilder::builder().git_sha(false).emit()?;
 
 	Ok(())
 }
