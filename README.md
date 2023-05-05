@@ -10,12 +10,12 @@ You're welcome to use it if you want to, but it isn't intended for
 widespread use.
 
 ## Infrastructure
-- [Poise](https://github.com/kangalioo/poise)
+- [Poise](https://github.com/serenity-rs/poise)
 - [Serenity](https://github.com/serenity-rs/serenity)
 - [Songbird](https://github.com/serenity-rs/songbird)
 - [Lavalink](https://github.com/freyacodes/Lavalink) (with the [lavalink-rs](https://gitlab.com/vicky5124/lavalink-rs) Rust wrapper).
-  - [Topi's Source Managers Plugin](https://github.com/Topis-Lavalink-Plugins/Topis-Source-Managers-Plugin) for additional music service support (Spotify, Apple Music)
-  - [DuncteBot Lavalink Plugin](https://github.com/DuncteBot/skybot-lavalink-plugin) for text-to-speech support
+	- [LavaSrc Plugin](https://github.com/TopiSenpai/LavaSrc) for additional music service support (Spotify, Apple Music)
+	- [DuncteBot Lavalink Plugin](https://github.com/DuncteBot/skybot-lavalink-plugin) for text-to-speech support
 - [Diesel](https://diesel.rs/)
 - [SQLite](https://sqlite.org/index.html)
 - [SponsorBlock](https://sponsor.ajay.app/) (with my [sponsor-block-rs](https://github.com/zedseven/sponsor-block-rs) Rust wrapper).
