@@ -8,7 +8,7 @@ description = "A simple music & dice bot made for personal use."
 
 [dependencies]
 anyhow = "1.0"
-diesel = { version = "1.4", features = ["r2d2", "sqlite"] }
+diesel = { version = "2.1", features = ["r2d2", "sqlite"] }
 diesel_migrations = "1.4"
 dotenv = "0.15"
 lavalink-rs = { git = "https://gitlab.com/zedseven/lavalink-rs", features = ["rustls", "serenity"] }
