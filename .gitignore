@@ -12,6 +12,12 @@
 # JetBrains IDEs' config & project settings directory
 **/.idea/
 
+# direnv's directory
+/.direnv/
+
+# Nix build results
+/result
+
 # Database files
 *.sqlite
 
