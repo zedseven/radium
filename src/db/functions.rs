@@ -1,10 +1,8 @@
 // Uses
-use diesel::sql_types::Integer;
+use diesel::expression::functions::sql_function;
 
 // Functions
-no_arg_sql_function!(
-	last_insert_rowid,
-	Integer,
-	"Represents the SQLite `last_insert_rowid` function, which is used to get the ROWID of the \
-	 last-inserted record."
-);
+sql_function! {
+	/// Represents the SQLite `last_insert_rowid` function, which is used to get the ROWID of the last-inserted record.
+	fn last_insert_rowid() -> Integer;
+}

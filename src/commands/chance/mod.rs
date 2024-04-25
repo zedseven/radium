@@ -205,7 +205,7 @@ pub async fn save_roll(
 
 	// Create the new records and insert
 	{
-		let conn = ctx.data().db_pool.get().unwrap();
+		let mut conn = ctx.data().db_pool.get().unwrap();
 
 		// Insert the roll command
 		let saved_roll = SavedRoll {
@@ -216,7 +216,7 @@ pub async fn save_roll(
 		};
 		replace_into(saved_rolls::table)
 			.values(&saved_roll)
-			.execute(&conn)
+			.execute(&mut conn)
 			.with_context(|| "failed to save the roll command to the database")?;
 	}
 
@@ -250,13 +250,13 @@ pub async fn delete_roll(
 	let deleted_rows = {
 		use self::saved_rolls::dsl::*;
 
-		let conn = ctx.data().db_pool.get().unwrap();
+		let mut conn = ctx.data().db_pool.get().unwrap();
 
 		delete(saved_rolls)
 			.filter(guild_id.eq(ctx_guild_id))
 			.filter(user_id.eq(ctx_user_id))
 			.filter(name.eq(&identifier))
-			.execute(&conn)
+			.execute(&mut conn)
 	};
 
 	// Respond with the result
@@ -308,7 +308,7 @@ pub async fn run_roll(
 	let (mut roll_reason, mut roll_command) = {
 		use self::saved_rolls::dsl::*;
 
-		let conn = ctx.data().db_pool.get().unwrap();
+		let mut conn = ctx.data().db_pool.get().unwrap();
 
 		let search_result = saved_rolls
 			.filter(guild_id.eq(ctx_guild_id))
@@ -316,7 +316,7 @@ pub async fn run_roll(
 			.filter(name.like(&identifier_query))
 			.select((name, command))
 			.limit(1)
-			.get_result::<(String, String)>(&conn);
+			.get_result::<(String, String)>(&mut conn);
 
 		if search_result.is_err() {
 			reply(
@@ -379,14 +379,14 @@ pub async fn saved_rolls(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let saved_commands = {
 		use self::saved_rolls::dsl::*;
 
-		let conn = ctx.data().db_pool.get().unwrap();
+		let mut conn = ctx.data().db_pool.get().unwrap();
 
 		saved_rolls
 			.filter(guild_id.eq(ctx_guild_id))
 			.filter(user_id.eq(ctx_user_id))
 			.order_by(name)
 			.select((name, command))
-			.load::<(String, String)>(&conn)
+			.load::<(String, String)>(&mut conn)
 			.with_context(|| "failed to retrieve a list of the saved roll commands")?
 	};
 
