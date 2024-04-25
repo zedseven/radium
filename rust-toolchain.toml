@@ -1,5 +1,5 @@
 [toolchain]
-channel = "nightly-2023-05-04"
+channel = "nightly-2024-02-25"
 components = [
 	"cargo",
 	"clippy",
