@@ -23,7 +23,9 @@ pub fn init(database_url: String) -> Result<Pool<ConnectionManager<SqliteConnect
 		.with_context(|| "failed to initialize the connection pool")?;
 
 	// Run embedded migrations to set up the database if necessary
-	let conn: &mut SqliteConnection = &mut pool.get().expect("the connection pool was just initialised");
+	let conn: &mut SqliteConnection = &mut pool
+		.get()
+		.expect("the connection pool was just initialised");
 
 	conn.run_pending_migrations(MIGRATIONS)
 		.map_err(|error| anyhow!(error))

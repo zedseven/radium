@@ -181,7 +181,9 @@ pub async fn play_shuffled(
 
 /// The internal implementation of `play` and `play_shuffled`.
 async fn play_internal(ctx: PoiseContext<'_>, query: &str, shuffle: bool) -> Result<(), Error> {
-	let Ok(guild) = join_internal(ctx, false).await else { return Ok(()) };
+	let Ok(guild) = join_internal(ctx, false).await else {
+		return Ok(());
+	};
 
 	let lavalink = &ctx.data().lavalink;
 
@@ -634,7 +636,9 @@ pub async fn tts(
 	}*/
 
 	// Join the channel and set up
-	let Ok(guild) = join_internal(ctx, false).await else { return Ok(()) };
+	let Ok(guild) = join_internal(ctx, false).await else {
+		return Ok(());
+	};
 
 	// Queue it up
 	let mut queued_tracks = 0;
