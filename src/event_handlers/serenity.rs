@@ -4,6 +4,7 @@ use serenity::{
 	client::RawEventHandler,
 	model::{event::Event, gateway::Ready},
 };
+use yansi::Paint;
 
 use crate::{
 	constants::{ERROR_STYLE, OKAY_STYLE},
@@ -29,13 +30,13 @@ impl RawEventHandler for SerenityHandler {
 async fn on_ready(ctx: SerenityContext, ready: Ready) {
 	println!(
 		"{}",
-		OKAY_STYLE.paint(format!("{} is connected!", ready.user.name))
+		format!("{} is connected!", ready.user.name).paint(OKAY_STYLE)
 	);
 	if ready.guilds.is_empty() {
-		println!("{}", ERROR_STYLE.paint("No connected guilds."));
+		println!("{}", "No connected guilds.".paint(ERROR_STYLE));
 		return;
 	}
-	println!("{}", HEADER_STYLE.paint("Connected guilds:"));
+	println!("{}", "Connected guilds:".paint(HEADER_STYLE));
 	for guild in &ready.guilds {
 		let guild_data = guild
 			.id

@@ -2,7 +2,6 @@
 #![allow(clippy::unreadable_literal)]
 
 // Uses
-use lazy_static::lazy_static;
 use serenity::{model::id::UserId, utils::Colour};
 use sponsor_block::{AcceptedActions, AcceptedCategories};
 use yansi::{Color, Style};
@@ -48,8 +47,6 @@ pub const MILLIS_PER_HOUR_F32: f32 = MILLIS_PER_HOUR as f32;
 pub const SECONDS_PER_HOUR_F32: f32 = SECONDS_PER_HOUR as f32;
 
 // Style Constants
-lazy_static! {
-	pub static ref HEADER_STYLE: Style = Style::new(Color::Cyan).bold().wrap();
-	pub static ref OKAY_STYLE: Style = Style::new(Color::Green).bold();
-	pub static ref ERROR_STYLE: Style = Style::new(Color::Red).bold();
-}
+pub const HEADER_STYLE: Style = Color::Cyan.bold().wrap();
+pub const OKAY_STYLE: Style = Color::Green.bold();
+pub const ERROR_STYLE: Style = Color::Red.bold();

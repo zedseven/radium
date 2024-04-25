@@ -73,7 +73,7 @@ use serenity::{
 };
 use songbird::{SerenityInit, Songbird};
 use sponsor_block::Client as SponsorBlockClient;
-use yansi::Paint;
+use yansi::{disable as disable_yansi, Paint};
 
 use crate::{
 	commands::commands,
@@ -117,20 +117,19 @@ async fn main() -> Result<(), Error> {
 
 	// Terminal Colouring Stuff
 	if var(DISABLE_CLI_COLOURS_VAR).is_ok() {
-		Paint::disable();
-	} else {
-		Paint::enable_windows_ascii();
+		disable_yansi();
 	}
 
 	// Header
 	println!(
 		"{}",
-		HEADER_STYLE.paint(format!(
+		format!(
 			"{} --- {} --- {}",
-			Paint::yellow("\u{2622}\u{fe0f}"),
-			Paint::red(format!("Radium v{PROGRAM_VERSION}")),
-			Paint::green("\u{1f4fb}")
-		))
+			"\u{2622}\u{fe0f}".yellow(),
+			format!("Radium v{PROGRAM_VERSION}").red(),
+			"\u{1f4fb}".green()
+		)
+		.paint(HEADER_STYLE)
 	);
 
 	// Prepare basic bot information
@@ -163,11 +162,11 @@ async fn main() -> Result<(), Error> {
 
 	println!(
 		"{}     {}",
-		HEADER_STYLE.paint("Build Commit:"),
+		"Build Commit:".paint(HEADER_STYLE),
 		&PROGRAM_COMMIT[..COMMIT_NUMBER_CHOP_LENGTH]
 	);
-	println!("{}   {}", HEADER_STYLE.paint("Application ID:"), app_id);
-	println!("{}         {}", HEADER_STYLE.paint("Owner ID:"), owner_id);
+	println!("{}   {}", "Application ID:".paint(HEADER_STYLE), app_id);
+	println!("{}         {}", "Owner ID:".paint(HEADER_STYLE), owner_id);
 
 	let mut owners = HashSet::new();
 	owners.insert(owner_id);
@@ -213,7 +212,7 @@ async fn main() -> Result<(), Error> {
 	let sponsor_block_client = SponsorBlockClient::builder(sponsor_block_user_id).build();
 	// Query the SponsorBlock API for the revision number and to test if it's
 	// operational
-	print!("{} ", HEADER_STYLE.paint("SponsorBlock API:"));
+	print!("{} ", "SponsorBlock API:".paint(HEADER_STYLE));
 	match sponsor_block_client
 		.fetch_api_status()
 		.await

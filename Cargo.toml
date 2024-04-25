@@ -24,7 +24,7 @@ songbird = "0.3"
 sponsor-block = { git = "https://github.com/zedseven/sponsor-block-rs", branch = "dev" }
 tokio = { version = "1.37", features = ["macros", "rt-multi-thread"] }
 url = "2.5"
-yansi = "0.5"
+yansi = "1.0"
 
 [target.'cfg(windows)'.dependencies]
 # To have sqlite3.lib be linked automatically
