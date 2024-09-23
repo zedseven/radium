@@ -33,5 +33,5 @@ yansi = "1.0"
 libsqlite3-sys = { version = "0.30", default-features = false, features = ["bundled"] }
 
 [features]
-default = []
+default = ["tts"]
 tts = []
