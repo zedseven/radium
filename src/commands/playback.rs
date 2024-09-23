@@ -275,7 +275,7 @@ async fn play_internal(ctx: PoiseContext<'_>, query: &str, shuffle: bool) -> Res
 
 			for track in &mut track_list {
 				if track.info.title == UNKNOWN_TITLE {
-					track.info.title = attachment.filename.clone();
+					track.info.title.clone_from(&attachment.filename);
 				}
 			}
 			queueable_tracks.append(&mut track_list);
@@ -309,7 +309,7 @@ async fn play_internal(ctx: PoiseContext<'_>, query: &str, shuffle: bool) -> Res
 		if track_info.title == UNKNOWN_TITLE {
 			let url = track_info.uri.as_deref().unwrap_or(query_trimmed);
 
-			track_info.title = Url::parse(url)
+			Url::parse(url)
 				.expect(
 					"unable to parse track info URI when it should have been guaranteed to be \
 					 valid",
@@ -318,7 +318,7 @@ async fn play_internal(ctx: PoiseContext<'_>, query: &str, shuffle: bool) -> Res
 				.expect("unable to parse URI as a proper path")
 				.last()
 				.expect("unable to find the last path segment of URI")
-				.to_owned();
+				.clone_into(&mut track_info.title);
 		}
 	}
 

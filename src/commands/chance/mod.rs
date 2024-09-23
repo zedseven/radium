@@ -495,8 +495,8 @@ async fn execute_roll(
 
 			if display_big_result {
 				if rolls_string.len() > MAX_FIELD_VALUE {
-					rolls_string =
-						"*\u{2026}clipped because there were too many values*".to_owned();
+					"*\u{2026}clipped because there were too many values*"
+						.clone_into(&mut rolls_string);
 				}
 
 				let mut embed = CreateEmbed::new();
