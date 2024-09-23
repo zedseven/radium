@@ -7,7 +7,6 @@
     };
     crane = {
       url = "github:ipetkov/crane";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
@@ -46,20 +45,17 @@
 
     cargoArtifacts = craneLib.buildDepsOnly commonArgs;
 
-    crate = craneLib.buildPackage (commonArgs
-      // {
-        inherit cargoArtifacts;
-      });
+    crate = craneLib.buildPackage (commonArgs // {inherit cargoArtifacts;});
 
-    crate-clippy = craneLib.cargoClippy (commonArgs
+    crate-clippy = craneLib.cargoClippy (
+      commonArgs
       // {
         inherit cargoArtifacts;
         cargoClippyExtraArgs = "-- --deny warnings --allow unused";
-      });
+      }
+    );
 
-    crate-fmt-check = craneLib.cargoFmt {
-      inherit src;
-    };
+    crate-fmt-check = craneLib.cargoFmt {inherit src;};
   in {
     packages.${system}.default = crate;
     checks.${system} = {
