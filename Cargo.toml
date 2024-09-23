@@ -32,10 +32,6 @@ yansi = "1.0"
 # To have sqlite3.lib be linked automatically
 libsqlite3-sys = { version = "0.22", default-features = false, features = ["bundled"] }
 
-[build-dependencies]
-anyhow = "1.0"
-vergen = { version = "8.3", default-features = false, features = ["git", "gitcl"] }
-
 [features]
 default = []
 tts = []

@@ -7,7 +7,7 @@ use poise::{
 use serenity::{all::CreateEmbed, gateway::ActivityData, model::mention::Mentionable};
 
 use crate::{
-	constants::{CREATED_DATE, CREATOR_ID, PREFIX, PROGRAM_COMMIT, PROGRAM_VERSION, SOURCE_LINK},
+	constants::{CREATED_DATE, CREATOR_ID, PREFIX, PROGRAM_VERSION, SOURCE_LINK},
 	util::{reply, reply_embed},
 	Error,
 	PoiseContext,
@@ -99,10 +99,7 @@ pub async fn about(ctx: PoiseContext<'_>) -> Result<(), Error> {
 		ctx,
 		CreateEmbed::new()
 			.title("Radium")
-			.description(format!(
-				"The Radium Radio bot, \
-				 [`v{PROGRAM_VERSION}`]({SOURCE_LINK}/commit/{PROGRAM_COMMIT})."
-			))
+			.description(format!("The Radium Radio bot, `v{PROGRAM_VERSION}`."))
 			.field("Authour:", CREATOR_ID.mention().to_string(), false)
 			.field("Source Link:", SOURCE_LINK, false)
 			.field(

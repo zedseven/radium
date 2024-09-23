@@ -81,7 +81,7 @@ use yansi::{disable as disable_yansi, Paint};
 
 use crate::{
 	commands::commands,
-	constants::{COMMIT_NUMBER_CHOP_LENGTH, HEADER_STYLE, PREFIX, PROGRAM_COMMIT, PROGRAM_VERSION},
+	constants::{COMMIT_NUMBER_CHOP_LENGTH, HEADER_STYLE, PREFIX, PROGRAM_VERSION},
 	db::init as database_init,
 	event_handlers::{SerenityHandler, LAVALINK_EVENTS},
 	segments::SegmentData,
@@ -162,11 +162,6 @@ async fn main() -> Result<(), Error> {
 	let application_id = application_info.id;
 	let owner_id = application_info.owner.map(|owner| owner.id);
 
-	println!(
-		"{}     {}",
-		"Build Commit:".paint(HEADER_STYLE),
-		&PROGRAM_COMMIT[..COMMIT_NUMBER_CHOP_LENGTH]
-	);
 	println!(
 		"{}   {}",
 		"Application ID:".paint(HEADER_STYLE),
