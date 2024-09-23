@@ -30,7 +30,7 @@ yansi = "1.0"
 
 [target.'cfg(windows)'.dependencies]
 # To have sqlite3.lib be linked automatically
-libsqlite3-sys = { version = "0.22", default-features = false, features = ["bundled"] }
+libsqlite3-sys = { version = "0.30", default-features = false, features = ["bundled"] }
 
 [features]
 default = []
