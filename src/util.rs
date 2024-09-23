@@ -1,7 +1,7 @@
 // Uses
 use anyhow::{Context, Error};
 use lazy_static::lazy_static;
-use poise::{send_reply, ReplyHandle};
+use poise::{send_reply, CreateReply, ReplyHandle};
 use regex::Regex;
 use serenity::builder::CreateEmbed;
 
@@ -20,36 +20,55 @@ use crate::{
 };
 
 // Functions
-pub async fn reply<S: ToString>(ctx: PoiseContext<'_>, msg: S) -> Result<ReplyHandle<'_>, Error> {
-	send_reply(ctx, |m| m.embed(|e| e.colour(MAIN_COLOUR).description(msg)))
+pub async fn reply<S: Into<String>>(
+	ctx: PoiseContext<'_>,
+	msg: S,
+) -> Result<ReplyHandle<'_>, Error> {
+	let reply = CreateReply {
+		embeds: vec![CreateEmbed::new().colour(MAIN_COLOUR).description(msg)],
+		..Default::default()
+	};
+
+	send_reply(ctx, reply)
 		.await
 		.with_context(|| "failed to send message")
 }
 
-pub async fn reply_plain<S: ToString>(
+pub async fn reply_plain<S: Into<String>>(
 	ctx: PoiseContext<'_>,
 	msg: S,
 ) -> Result<ReplyHandle<'_>, Error> {
-	send_reply(ctx, |m| m.content(msg.to_string()))
+	let reply = CreateReply {
+		content: Some(msg.into()),
+		..Default::default()
+	};
+
+	send_reply(ctx, reply)
 		.await
 		.with_context(|| "failed to send message")
 }
 
 pub async fn reply_embed(
 	ctx: PoiseContext<'_>,
-	embed: impl FnOnce(&mut CreateEmbed) -> &mut CreateEmbed,
+	embed: CreateEmbed,
 ) -> Result<ReplyHandle<'_>, Error> {
-	send_reply(ctx, |m| m.embed(|e| embed(e.colour(MAIN_COLOUR))))
+	let reply = CreateReply {
+		embeds: vec![embed.colour(MAIN_COLOUR)],
+		..Default::default()
+	};
+
+	send_reply(ctx, reply)
 		.await
 		.with_context(|| "failed to send message")
 }
 
-pub fn create_linked_title(title: &str, uri: &str, max_length: usize) -> String {
-	if uri_is_url(uri) {
-		format!("[{}]({})", chop_str(title, max_length), uri,)
-	} else {
-		chop_str(title, max_length)
+pub fn create_linked_title(title: &str, uri: Option<&str>, max_length: usize) -> String {
+	if let Some(uri) = uri {
+		if uri_is_url(uri) {
+			return format!("[{}]({})", chop_str(title, max_length), uri);
+		}
 	}
+	chop_str(title, max_length)
 }
 pub fn uri_is_url(uri: &str) -> bool {
 	lazy_static! {

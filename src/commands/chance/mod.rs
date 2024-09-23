@@ -14,7 +14,7 @@ use diesel::{
 	TextExpressionMethods,
 };
 use poise::command;
-use serenity::model::mention::Mentionable;
+use serenity::{all::CreateEmbed, model::mention::Mentionable};
 
 use self::roll::{evaluate_roll_rpn, parse_roll_command, Dice};
 use crate::{
@@ -33,15 +33,15 @@ const MAX_FIELD_VALUE: usize = 1024;
 /// Roll as many dice as you want, and do whatever math you need to do with
 /// their roll results.
 ///
-/// Dice rolls are specified as `<count>d<size>`, eg. `2d8`. If the count is 1,
-/// you can leave it off. (eg. `d20`)
+/// Dice rolls are specified as `<count>d<size>`, e.g. `2d8`. If the count is 1,
+/// you can leave it off. (e.g. `d20`)
 ///
 /// Dice rolls also support (dis)advantage. Simply put a `b` (for best) or `w`
-/// (for worst) on the end of the roll, eg. `3d10b2`. Again, if you only want
-/// the best 1, you can leave it off. (eg. `2d20w` for disadvantage)
+/// (for worst) on the end of the roll, e.g. `3d10b2`. Again, if you only want
+/// the best 1, you can leave it off. (e.g. `2d20w` for disadvantage)
 ///
 /// You can do whatever math you want with the dice values, or even do pure math
-/// with no dice involved. (eg. `/roll (2d20b + 1d8) ^ 2 / 3`)
+/// with no dice involved. (e.g. `/roll (2d20b + 1d8) ^ 2 / 3`)
 #[command(
 	prefix_command,
 	slash_command,
@@ -135,18 +135,20 @@ pub async fn batch_roll(
 		// Escape the command string
 		let command_slice_escaped = escape_str(command_slice);
 
-		reply_embed(ctx, |e| {
-			if !slash_command {
-				e.field("For:", ctx.author().mention(), true);
-			}
-			e.field("Count:", format!("`{count}`"), true);
-			if !annotation.is_empty() {
-				e.field("Reason:", format!("`{annotation}`"), true);
-			}
-			e.field("Command:", format!("`{command_slice_escaped}`"), false)
-				.field("Results:", format!("```{result_display}```"), false)
-		})
-		.await?;
+		let mut embed = CreateEmbed::new();
+
+		if !slash_command {
+			embed = embed.field("For:", ctx.author().mention().to_string(), true);
+		}
+		embed = embed.field("Count:", format!("`{count}`"), true);
+		if !annotation.is_empty() {
+			embed = embed.field("Reason:", format!("`{annotation}`"), true);
+		}
+		embed = embed
+			.field("Command:", format!("`{command_slice_escaped}`"), false)
+			.field("Results:", format!("```{result_display}```"), false);
+
+		reply_embed(ctx, embed).await?;
 	} else {
 		reply(ctx, "Invalid command.").await?;
 		return Ok(());
@@ -205,7 +207,7 @@ pub async fn save_roll(
 
 	// Create the new records and insert
 	{
-		let mut conn = ctx.data().db_pool.get().unwrap();
+		let mut conn = ctx.data().database_pool.get().unwrap();
 
 		// Insert the roll command
 		let saved_roll = SavedRoll {
@@ -250,7 +252,7 @@ pub async fn delete_roll(
 	let deleted_rows = {
 		use self::saved_rolls::dsl::*;
 
-		let mut conn = ctx.data().db_pool.get().unwrap();
+		let mut conn = ctx.data().database_pool.get().unwrap();
 
 		delete(saved_rolls)
 			.filter(guild_id.eq(ctx_guild_id))
@@ -308,7 +310,7 @@ pub async fn run_roll(
 	let (mut roll_reason, mut roll_command) = {
 		use self::saved_rolls::dsl::*;
 
-		let mut conn = ctx.data().db_pool.get().unwrap();
+		let mut conn = ctx.data().database_pool.get().unwrap();
 
 		let search_result = saved_rolls
 			.filter(guild_id.eq(ctx_guild_id))
@@ -379,7 +381,7 @@ pub async fn saved_rolls(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	let saved_commands = {
 		use self::saved_rolls::dsl::*;
 
-		let mut conn = ctx.data().db_pool.get().unwrap();
+		let mut conn = ctx.data().database_pool.get().unwrap();
 
 		saved_rolls
 			.filter(guild_id.eq(ctx_guild_id))
@@ -409,7 +411,8 @@ pub async fn saved_rolls(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	}
 
 	// Send the reply
-	reply_embed(ctx, |e| e.title("Saved Rolls").description(output)).await?;
+	let embed = CreateEmbed::new().title("Saved Rolls").description(output);
+	reply_embed(ctx, embed).await?;
 
 	Ok(())
 }
@@ -433,21 +436,23 @@ pub async fn dice_jail(ctx: PoiseContext<'_>) -> Result<(), Error> {
 	}
 	.eval();
 
-	reply_embed(ctx, |e| {
-		if !is_application_context(&ctx) {
-			e.field("Requested By:", ctx.author().mention(), true);
-		}
-		e.title("New Dice")
-			.description(
-				"The previous dice have been\nput in dice jail for now. \u{1f3b2}\u{26d3}\u{fe0f}",
-			)
-			.field(
-				format!("Sample Rolls ({DICE_COUNT}d{DICE_SIZE}):"),
-				display_rolls(&[rolls]),
-				false,
-			)
-	})
-	.await?;
+	let mut embed = CreateEmbed::new();
+
+	if !is_application_context(&ctx) {
+		embed = embed.field("Requested By:", ctx.author().mention().to_string(), true);
+	}
+	embed = embed
+		.title("New Dice")
+		.description(
+			"The previous dice have been\nput in dice jail for now. \u{1f3b2}\u{26d3}\u{fe0f}",
+		)
+		.field(
+			format!("Sample Rolls ({DICE_COUNT}d{DICE_SIZE}):"),
+			display_rolls(&[rolls]),
+			false,
+		);
+
+	reply_embed(ctx, embed).await?;
 
 	Ok(())
 }
@@ -493,18 +498,21 @@ async fn execute_roll(
 					rolls_string =
 						"*\u{2026}clipped because there were too many values*".to_owned();
 				}
-				reply_embed(ctx, |e| {
-					if !slash_command {
-						e.field("For:", ctx.author().mention(), true);
-					}
-					if let Some(annotation) = annotation_escaped {
-						e.field("Reason:", format!("`{annotation}`"), true);
-					}
-					e.field("Command:", format!("`{command_slice_escaped}`"), false)
-						.field("Rolls:", rolls_string, false)
-						.field("Result:", format!("`{result_display}`"), false)
-				})
-				.await?;
+
+				let mut embed = CreateEmbed::new();
+
+				if !slash_command {
+					embed = embed.field("For:", ctx.author().mention().to_string(), true);
+				}
+				if let Some(annotation) = annotation_escaped {
+					embed = embed.field("Reason:", format!("`{annotation}`"), true);
+				}
+				embed = embed
+					.field("Command:", format!("`{command_slice_escaped}`"), false)
+					.field("Rolls:", rolls_string, false)
+					.field("Result:", format!("`{result_display}`"), false);
+
+				reply_embed(ctx, embed).await?;
 			} else {
 				let mut display = String::new();
 				let mut pushed = false;
@@ -599,10 +607,10 @@ fn display_rolls(dice_rolls: &[Vec<u32>]) -> String {
 fn get_ctx_ids(ctx: PoiseContext) -> Option<(i64, i64)> {
 	Some((
 		if let Some(guild_id) = ctx.guild_id() {
-			guild_id.0 as i64
+			guild_id.get() as i64
 		} else {
 			return None;
 		},
-		ctx.author().id.0 as i64,
+		ctx.author().id.get() as i64,
 	))
 }

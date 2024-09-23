@@ -4,7 +4,7 @@ use poise::{
 	builtins::{help as poise_help, register_application_commands, HelpConfiguration},
 	command,
 };
-use serenity::model::{gateway::Activity, mention::Mentionable};
+use serenity::{all::CreateEmbed, gateway::ActivityData, model::mention::Mentionable};
 
 use crate::{
 	constants::{CREATED_DATE, CREATOR_ID, PREFIX, PROGRAM_COMMIT, PROGRAM_VERSION, SOURCE_LINK},
@@ -35,20 +35,21 @@ pub async fn register(ctx: PoisePrefixContext<'_>, #[flag] local: bool) -> Resul
 	rename = "setstatus",
 	aliases("status")
 )]
+#[allow(clippy::unused_async)]
 pub async fn set_status(
 	ctx: PoisePrefixContext<'_>,
 	r#type: String,
 	#[rest] status: String,
 ) -> Result<(), Error> {
 	let activity = match r#type.to_lowercase().trim() {
-		"playing" | "play" | "p" => Activity::playing(status), // Playing ...
-		"listening" | "listen" | "l" => Activity::listening(status), // Listening to ...
-		"watching" | "watch" | "w" => Activity::watching(status), // Watching ...
-		"competing" | "compete" | "c" => Activity::competing(status), // Competing in ...
-		_ => return Ok(()),
+		"playing" | "play" | "p" => ActivityData::playing(status), // Playing ...
+		"listening" | "listen" | "l" => ActivityData::listening(status), // Listening to ...
+		"watching" | "watch" | "w" => ActivityData::watching(status), // Watching ...
+		"competing" | "compete" | "c" => ActivityData::competing(status), // Competing in ...
+		_ => ActivityData::custom(status),
 	};
 
-	ctx.serenity_context.set_activity(activity).await;
+	ctx.serenity_context.set_activity(Some(activity));
 
 	Ok(())
 }
@@ -74,14 +75,15 @@ pub async fn help(
 		ctx,
 		command.as_deref(),
 		HelpConfiguration {
-			extra_text_at_bottom:       format!(
-				"You can also use commands with a `{PREFIX}` instead of a slash, eg. \
+			extra_text_at_bottom: format!(
+				"You can also use commands with a `{PREFIX}` instead of a slash, e.g. \
 				 `{PREFIX}help` instead of `/help`.\nEdit your message to the bot and the bot \
-				 will edit it's response for this help dialog."
+				 will edit its response for this help dialog."
 			)
 			.as_str(),
-			ephemeral:                  true,
+			ephemeral: true,
 			show_context_menu_commands: false,
+			..Default::default()
 		},
 	)
 	.await?;
@@ -93,20 +95,22 @@ pub async fn help(
 /// There isn't much else to say - just use the command.
 #[command(prefix_command, slash_command, category = "Utility")]
 pub async fn about(ctx: PoiseContext<'_>) -> Result<(), Error> {
-	reply_embed(ctx, |e| {
-		e.title("Radium")
+	reply_embed(
+		ctx,
+		CreateEmbed::new()
+			.title("Radium")
 			.description(format!(
 				"The Radium Radio bot, \
 				 [`v{PROGRAM_VERSION}`]({SOURCE_LINK}/commit/{PROGRAM_COMMIT})."
 			))
-			.field("Authour:", CREATOR_ID.mention(), false)
+			.field("Authour:", CREATOR_ID.mention().to_string(), false)
 			.field("Source Link:", SOURCE_LINK, false)
 			.field(
 				"Created:",
 				format!("{CREATED_DATE}, because Groovy died. \u{1f6b1}"),
 				false,
-			)
-	})
+			),
+	)
 	.await?;
 	Ok(())
 }

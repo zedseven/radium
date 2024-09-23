@@ -8,21 +8,23 @@ description = "A simple music & dice bot made for personal use."
 
 [dependencies]
 anyhow = "1.0"
-diesel = { version = "2.1", features = ["r2d2", "sqlite"] }
-diesel_migrations = "2.1"
+diesel = { version = "2.2", features = ["r2d2", "sqlite"] }
+diesel_migrations = "2.2"
 dotenv = "0.15"
-lavalink-rs = { git = "https://gitlab.com/zedseven/lavalink-rs", features = ["rustls", "serenity"] }
-lazy_static = "1.4"
+futures = "0.3"
+lavalink-rs = { version = "0.13", features = ["rustls-native-roots", "serenity", "songbird"] }
+lazy_static = "1.5"
 lru = "0.12"
 parse_duration = "2.1"
-poise = "0.5"
+poise = "0.6"
 rand = "0.8"
 regex = "1.10"
-serenity = { version = "0.11", default-features = false, features = ["builder", "client", "gateway", "model", "utils", "collector"] }
+serde_json = "1.0"
+serenity = { version = "0.12", default-features = false, features = ["builder", "client", "gateway", "model", "utils", "collector"] }
 shuffle = "0.1"
-songbird = "0.3"
+songbird = "0.4"
 sponsor-block = { git = "https://github.com/zedseven/sponsor-block-rs", branch = "dev" }
-tokio = { version = "1.37", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.39", features = ["macros", "rt-multi-thread"] }
 url = "2.5"
 yansi = "1.0"
 
@@ -32,7 +34,7 @@ libsqlite3-sys = { version = "0.22", default-features = false, features = ["bund
 
 [build-dependencies]
 anyhow = "1.0"
-vergen = { version = "8.1", default-features = false, features = ["git", "gitcl"] }
+vergen = { version = "8.3", default-features = false, features = ["git", "gitcl"] }
 
 [features]
 default = []

@@ -63,13 +63,17 @@ use diesel::{
 	SqliteConnection,
 };
 use dotenv::dotenv;
-use lavalink_rs::LavalinkClient;
+use lavalink_rs::{
+	client::LavalinkClient,
+	model::UserId,
+	node::NodeBuilder,
+	prelude::NodeDistributionStrategy,
+};
 use poise::{builtins::on_error, EditTracker, Framework, FrameworkOptions, PrefixFrameworkOptions};
 use serenity::{
-	self,
+	client::ClientBuilder,
 	http::Http,
 	model::{gateway::GatewayIntents, id::GuildId},
-	utils::parse_token,
 };
 use songbird::{SerenityInit, Songbird};
 use sponsor_block::Client as SponsorBlockClient;
@@ -79,7 +83,7 @@ use crate::{
 	commands::commands,
 	constants::{COMMIT_NUMBER_CHOP_LENGTH, HEADER_STYLE, PREFIX, PROGRAM_COMMIT, PROGRAM_VERSION},
 	db::init as database_init,
-	event_handlers::{LavalinkHandler, SerenityHandler},
+	event_handlers::{SerenityHandler, LAVALINK_EVENTS},
 	segments::SegmentData,
 };
 
@@ -88,8 +92,8 @@ const DISCORD_TOKEN_VAR: &str = "DISCORD_TOKEN";
 const DATABASE_URL_VAR: &str = "DATABASE_URL";
 const DATABASE_URL_DEFAULT: &str = "db.sqlite";
 const LAVALINK_HOST_VAR: &str = "LAVALINK_HOST";
+const LAVALINK_HOST_DEFAULT: &str = "127.0.0.1:2333";
 const LAVALINK_PASSWORD_VAR: &str = "LAVALINK_PASSWORD";
-const LAVALINK_HOST_DEFAULT: &str = "127.0.0.1";
 const SPONSOR_BLOCK_USER_ID_VAR: &str = "SPONSOR_BLOCK_USER_ID";
 const DISABLE_CLI_COLOURS_VAR: &str = "DISABLE_CLI_COLOURS";
 
@@ -101,10 +105,11 @@ pub type PoisePrefixContext<'a> = poise::PrefixContext<'a, DataArc, Error>;
 pub type SerenityContext = serenity::client::Context;
 
 pub struct Data {
-	db_pool:       Pool<ConnectionManager<SqliteConnection>>,
+	database_pool: Pool<ConnectionManager<SqliteConnection>>,
 	songbird:      Arc<Songbird>,
 	lavalink:      LavalinkClient,
 	sponsor_block: SponsorBlockClient,
+	/// Used to keep track numbers consistent in the queue.
 	queued_count:  Mutex<HashMap<GuildId, usize>>,
 	segment_data:  Mutex<SegmentData>,
 }
@@ -141,9 +146,6 @@ async fn main() -> Result<(), Error> {
 	} else {
 		format!("Bot {raw_token}")
 	};
-	let app_id = parse_token(&raw_token)
-		.with_context(|| "token is invalid".to_owned())?
-		.0;
 
 	let sponsor_block_user_id = var(SPONSOR_BLOCK_USER_ID_VAR).with_context(|| {
 		format!(
@@ -153,30 +155,41 @@ async fn main() -> Result<(), Error> {
 	})?;
 
 	let http = Http::new(&token);
-	let owner_id = http
+	let application_info = http
 		.get_current_application_info()
 		.await
-		.with_context(|| "failed to get application info".to_owned())?
-		.owner
-		.id;
+		.with_context(|| "failed to get application info".to_owned())?;
+	let application_id = application_info.id;
+	let owner_id = application_info.owner.map(|owner| owner.id);
 
 	println!(
 		"{}     {}",
 		"Build Commit:".paint(HEADER_STYLE),
 		&PROGRAM_COMMIT[..COMMIT_NUMBER_CHOP_LENGTH]
 	);
-	println!("{}   {}", "Application ID:".paint(HEADER_STYLE), app_id);
-	println!("{}         {}", "Owner ID:".paint(HEADER_STYLE), owner_id);
+	println!(
+		"{}   {}",
+		"Application ID:".paint(HEADER_STYLE),
+		application_id
+	);
+	println!(
+		"{}         {}",
+		"Owner ID:".paint(HEADER_STYLE),
+		owner_id.map_or("Unknown".to_owned(), |owner_id| owner_id.to_string())
+	);
 
 	let mut owners = HashSet::new();
-	owners.insert(owner_id);
+	if let Some(owner_id) = owner_id {
+		owners.insert(owner_id);
+	}
+
 	let options = FrameworkOptions {
 		commands: commands(),
 		prefix_options: PrefixFrameworkOptions {
 			prefix: Some(PREFIX.to_owned()),
 			mention_as_prefix: true,
 			case_insensitive_commands: true,
-			edit_tracker: Some(EditTracker::for_timespan(Duration::from_secs(3600))),
+			edit_tracker: Some(EditTracker::for_timespan(Duration::from_secs(3600)).into()),
 			..PrefixFrameworkOptions::default()
 		},
 		on_error: |e| {
@@ -196,19 +209,26 @@ async fn main() -> Result<(), Error> {
 	// global Data which we don't actually have initialized yet
 	let pre_init_data_arc = Arc::new(Mutex::new(None));
 
-	let lava_client = LavalinkClient::builder(app_id.0)
-		.set_host(var(LAVALINK_HOST_VAR).unwrap_or_else(|_| LAVALINK_HOST_DEFAULT.to_owned()))
-		.set_password(var(LAVALINK_PASSWORD_VAR).with_context(|| {
+	let lavalink_node_builders = vec![NodeBuilder {
+		hostname: var(LAVALINK_HOST_VAR).unwrap_or_else(|_| LAVALINK_HOST_DEFAULT.to_owned()),
+		password: var(LAVALINK_PASSWORD_VAR).with_context(|| {
 			format!(
 				"expected the Lavalink password in the environment variable \
 				 {LAVALINK_PASSWORD_VAR}"
 			)
-		})?)
-		.build(LavalinkHandler {
-			data: Arc::clone(&pre_init_data_arc),
-		})
-		.await
-		.with_context(|| "failed to start the Lavalink client")?;
+		})?,
+		user_id: UserId(application_id.get()),
+		..Default::default()
+	}];
+
+	let lavalink_client = LavalinkClient::new_with_data(
+		LAVALINK_EVENTS(),
+		lavalink_node_builders,
+		NodeDistributionStrategy::default(),
+		Arc::clone(&pre_init_data_arc),
+	)
+	.await;
+
 	let sponsor_block_client = SponsorBlockClient::builder(sponsor_block_user_id).build();
 	// Query the SponsorBlock API for the revision number and to test if it's
 	// operational
@@ -231,12 +251,12 @@ async fn main() -> Result<(), Error> {
 	let songbird_clone = Arc::clone(&songbird); // Required because the closure that uses it moves the value
 
 	let data = Arc::new(Data {
-		db_pool:       database_pool,
-		songbird:      songbird_clone,
-		lavalink:      lava_client,
+		database_pool,
+		songbird: songbird_clone,
+		lavalink: lavalink_client,
 		sponsor_block: sponsor_block_client,
-		queued_count:  Mutex::new(HashMap::new()),
-		segment_data:  Mutex::new(SegmentData::new()),
+		queued_count: Mutex::new(HashMap::new()),
+		segment_data: Mutex::new(SegmentData::new()),
 	});
 	// Set the Data Arc that was given to the LavalinkHandler
 	{
@@ -244,22 +264,25 @@ async fn main() -> Result<(), Error> {
 		*data_guard = Some(Arc::clone(&data));
 	}
 
-	Framework::builder()
+	// Build the Poise framework
+	let framework = Framework::builder()
 		.options(options)
-		.token(&token)
-		.intents(GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT)
-		.client_settings(|client_builder| {
-			client_builder
-				.raw_event_handler(SerenityHandler)
-				.register_songbird_with(songbird)
-		})
 		.setup(move |_ctx, _ready, _framework| Box::pin(async move { Ok(data) }))
-		.build()
-		.await
-		.with_context(|| "failed to build the bot framework")?
-		.start()
-		.await
-		.with_context(|| "failed to start up")?;
+		.build();
+
+	// Build the Serenity client
+	let mut client = ClientBuilder::new(
+		token,
+		GatewayIntents::non_privileged() | GatewayIntents::MESSAGE_CONTENT,
+	)
+	.raw_event_handler(SerenityHandler)
+	.register_songbird_with(songbird)
+	.framework(framework)
+	.await
+	.with_context(|| "failed to set up the client")?;
+
+	// Start the client
+	client.start().await.with_context(|| "failed to start up")?;
 
 	Ok(())
 }
